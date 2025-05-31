@@ -264,9 +264,8 @@ async def send_doc(bot: Client, m: Message, cc, ka, cc1, prog, count, name, chan
     await bot.send_document(ka, caption=cc1)
     count+=1
     await reply.delete (True)
-    time.sleep(1)
+    
     os.remove(ka)
-    time.sleep(3) 
 
 
 def decrypt_file(file_path, key):  
