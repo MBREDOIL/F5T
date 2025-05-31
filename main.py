@@ -714,7 +714,7 @@ async def txt_handler(bot: Client, m: Message):
                             
                     else:
                         try:
-                            cmd = f'yt-dlp -o "{name}.pdf" "{url}"'
+                            cmd = f'yt-dlp --no-check-certificate -o "{name}.pdf" "{url}"'
                             download_cmd = f"{cmd} -R 25 --fragment-retries 25"
                             os.system(download_cmd)
                             copy = await bot.send_document(chat_id=channel_id, document=f'{name}.pdf', caption=cc1)
@@ -740,7 +740,7 @@ async def txt_handler(bot: Client, m: Message):
                 elif any(ext in url for ext in [".jpg", ".jpeg", ".png"]):
                     try:
                         ext = url.split('.')[-1]
-                        cmd = f'yt-dlp -o "{name}.{ext}" "{url}"'
+                        cmd = f'yt-dlp --no-check-certificate -o "{name}.{ext}" "{url}"'
                         download_cmd = f"{cmd} -R 25 --fragment-retries 25"
                         os.system(download_cmd)
                         copy = await bot.send_photo(chat_id=channel_id, photo=f'{name}.{ext}', caption=ccimg)
