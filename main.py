@@ -157,8 +157,9 @@ async def process_drm(
         else:
             CR = raw_text3
 
-        thumb = None
-        if raw_text6 != "/d" and (raw_text6.startswith("http://") or raw_text6.startswith("https://")):
+        
+        #thumb = None
+        #if raw_text6 != "/d" and (raw_text6.startswith("http://") or raw_text6.startswith("https://")):
             thumb_path = f"thumb_{m.chat.id}.jpg"
             status, _ = getstatusoutput(f"wget '{raw_text6}' -O '{thumb_path}'")
             if status == 0 and os.path.exists(thumb_path):
@@ -651,8 +652,9 @@ async def start(bot, m: Message):
            f"🚀 You are not subscribed to any plan yet!\n\n"
            f"<blockquote>💵 Monthly Plan: free</blockquote>\n\n"
            f"If you want to buy membership of the bot, feel free to contact the Bot Admin.\n", 
-           disable_web_page_preview=True, 
-           reply_markup=keyboard
+           f"If you face any problem contact -  [XOXOX](https://t.me/BOT)\n", 
+            disable_web_page_preview=True, 
+            reply_markup=BUTTONSCONTACT
         )
 
 @bot.on_message(filters.command(["upgrade"]))
@@ -733,6 +735,12 @@ async def send_logs(client: Client, m: Message):
 async def drm_handler(bot: Client, m: Message):  
     editable = await m.reply_text(f"__Hii, I am drm Downloader Bot__\n\n<i>Send Me Your txt file which enclude Name with url...\nE.g: Name: Link</i>")
     input: Message = await bot.listen(editable.chat.id)
+
+    # After (check if document exists):
+    if not input_msg.document:
+        await editable.edit("Please send a file, not text")
+        return
+
     x = await input.download()
     await input.delete(True)
     
@@ -772,10 +780,20 @@ async def drm_handler(bot: Client, m: Message):
     raw_text4 = input4.text
     await input4.delete(True)
 
-    await editable.edit(f"Send the Video Thumb URL\nSend /d for use default\n\nYou can direct upload thumb")
-    input6 = await bot.listen(editable.chat.id)
+
+    await editable.edit(f"Send the Video Thumb URL\nSend /d for use default\n\nYou can direct upload thumb\nSend **No** for use default")
+    input6 = message = await bot.listen(editable.chat.id)
     raw_text6 = input6.text
     await input6.delete(True)
+
+    if input6.photo:
+        thumb = await input6.download()  # Use the photo sent by the user
+    elif raw_text6.startswith("http://") or raw_text6.startswith("https://"):
+        # If a URL is provided, download thumbnail from the URL
+        getstatusoutput(f"wget '{raw_text6}' -O 'thumb.jpg'")
+        thumb = "thumb.jpg"
+    else:
+        thumb = raw_text6
 
     await editable.edit("__Please Provide Channel id or where you want to Upload video or Sent Video otherwise /d __")
     input7: Message = await bot.listen(editable.chat.id)
