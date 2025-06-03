@@ -390,6 +390,7 @@ async def process_drm(
                         else:
                             failed_count += 1
                             await bot.send_message(channel_id, f'⚠️**Video Download Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}')
+                        await prog.delete()
                         await asyncio.sleep(1)
                 
                 except Exception as e:
