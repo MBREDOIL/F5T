@@ -30,13 +30,9 @@ logger = logging.getLogger(__name__)
 
 async def download_with_retry(url, file_path, max_retries=2):
     """Download file with automatic retries"""
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
-    
     for attempt in range(max_retries + 1):
         try:
-            async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=ssl_context)) as session:
+            async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
                 async with session.get(url) as response:
                     if response.status == 200:
                         async with aiofiles.open(file_path, 'wb') as f:
