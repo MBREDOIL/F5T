@@ -39,6 +39,9 @@ import zipfile
 import shutil
 import ffmpeg
 
+import signal
+from collections import defaultdict
+
 # Initialize the bot
 bot = Client(
     "bot",
@@ -57,6 +60,9 @@ photoyt = 'https://tinypic.host/images/2025/03/18/YouTube-Logo.wine.png' #https:
 photocp = 'https://tinypic.host/images/2025/03/28/IMG_20250328_133126.jpg'
 photozip = 'https://envs.sh/cD_.jpg'
 
+# Global task management
+user_tasks = defaultdict(dict)
+active_tasks = set()
 
 # Inline keyboard for start command
 BUTTONSCONTACT = InlineKeyboardMarkup([[InlineKeyboardButton(text="📞 Contact", url="https://t.me/BOT")]])
@@ -114,7 +120,37 @@ async def remove_auth_user(client: Client, message: Message):
     except (IndexError, ValueError):
         await message.reply_text("Please provide a valid user ID.")
     
-        
+
+@bot.on_message(filters.command(["stop"]) )
+async def stop_handler(_, m: Message):
+    user_id = m.chat.id
+    if user_id in user_tasks:
+        task = user_tasks[user_id].get('task')
+        if task and not task.done():
+            task.cancel()
+            await m.reply_text("🚦 YOUR TASK STOPPED 🚦", True)
+        # Clean user-specific resources
+        user_folder = f"./downloads/{user_id}"
+        if os.path.exists(user_folder):
+            shutil.rmtree(user_folder)
+        del user_tasks[user_id]
+    else:
+        await m.reply_text("❌ No active task to stop")
+
+@bot.on_message(filters.command(["stopall"]) & filters.user(OWNER))
+async def stopall_handler(_, m: Message):
+    for user_id, data in list(user_tasks.items()):
+        task = data.get('task')
+        if task and not task.done():
+            task.cancel()
+        # Clean user-specific resources
+        user_folder = f"./downloads/{user_id}"
+        if os.path.exists(user_folder):
+            shutil.rmtree(user_folder)
+    user_tasks.clear()
+    active_tasks.clear()
+    await m.reply_text("🔥 ALL TASKS STOPPED & CLEANED 🔥")
+
 @bot.on_message(filters.command("cookies") & filters.private)
 async def cookies_handler(client: Client, m: Message):
     await m.reply_text(
@@ -452,45 +488,14 @@ async def send_logs(client: Client, m: Message):  # Correct parameter name
     except Exception as e:
         await m.reply_text(f"Error sending logs: {e}")
 
-@bot.on_message(filters.command(["drm"]) )
-async def txt_handler(bot: Client, m: Message):  
+@bot.on_message(filters.command(["drm"]))
+async def drm_handler(bot: Client, m: Message):  
     editable = await m.reply_text(f"__Hii, I am drm Downloader Bot__\n\n<i>Send Me Your txt file which enclude Name with url...\nE.g: Name: Link</i>")
     input: Message = await bot.listen(editable.chat.id)
     x = await input.download()
     await input.delete(True)
-    file_name, ext = os.path.splitext(os.path.basename(x))  # Extract filename & extension
-    path = f"./downloads/{m.chat.id}"
-    pdf_count = 0
-    img_count = 0
-    other_count = 0
-    
-    try:    
-        with open(x, "r") as f:
-            content = f.read()
-        content = content.split("\n")
-        
-        links = []
-        for i in content:
-            if "://" in i:
-                url = i.split("://", 1)[1]
-                links.append(i.split("://", 1))
-                if ".pdf" in url:
-                    pdf_count += 1
-                elif url.endswith((".png", ".jpeg", ".jpg")):
-                    img_count += 1
-                else:
-                    other_count += 1
-        os.remove(x)
-    except:
-        await m.reply_text("<pre><code>🔹Invalid file input.</code></pre>")
-        os.remove(x)
-        return
     
     await editable.edit(f"Total 🔗 links found are {len(links)}\nSend From where you want to download.initial is 1")
-    if m.chat.id not in AUTH_USERS:
-        print(f"User ID not in AUTH_USERS", m.chat.id)
-        await bot.send_message(m.chat.id, f"__Oopss! You are not a Premium member __\n__PLEASE /upgrade YOUR PLAN__\n__Send me your user id for authorization__\n__Your User id__ - `{m.chat.id}`\n")
-        return
     input0: Message = await bot.listen(editable.chat.id)
     raw_text = input0.text
     await input0.delete(True)
@@ -499,96 +504,167 @@ async def txt_handler(bot: Client, m: Message):
     input1: Message = await bot.listen(editable.chat.id)
     raw_text0 = input1.text
     await input1.delete(True)
-    if raw_text0 == '/d':
-        b_name = file_name.replace('_', ' ')
-    else:
-        b_name = raw_text0
 
     await editable.edit("__Enter resolution or Video Quality (`144`, `240`, `360`, `480`, `720`, `1080`)__")
     input2: Message = await bot.listen(editable.chat.id)
     raw_text2 = input2.text
-    quality = f"{raw_text2}p"
     await input2.delete(True)
-    try:
-        if raw_text2 == "144":
-            res = "256x144"
-        elif raw_text2 == "240":
-            res = "426x240"
-        elif raw_text2 == "360":
-            res = "640x360"
-        elif raw_text2 == "480":
-            res = "854x480"
-        elif raw_text2 == "720":
-            res = "1280x720"
-        elif raw_text2 == "1080":
-            res = "1920x1080" 
-        else: 
-            res = "UN"
-    except Exception:
-            res = "UN"
 
-    await editable.edit("__Enter the credit name for the caption. If you want both a permanent credit in the caption and the file name, separate them with a comma (,). or you want default then send /d__\n\n<blockquote><i>Example for caption only: Admin\nExample for both caption and file name: Admin,Prename</i></blockquote>")
+    await editable.edit("__Enter the credit name for the caption.__")
     input3: Message = await bot.listen(editable.chat.id)
     raw_text3 = input3.text
     await input3.delete(True)
-    if raw_text3 == '/d':
-        CR = f"{CREDIT}"
-    elif "," in raw_text3:
-        CR, PRENAME = raw_text3.split(",")
-    else:
-        CR = raw_text3
 
     await editable.edit("🔹Enter Your PW Token For 𝐌𝐏𝐃 𝐔𝐑𝐋\n🔹Send /anything for use default")
     input4: Message = await bot.listen(editable.chat.id)
     raw_text4 = input4.text
     await input4.delete(True)
 
-    await editable.edit(f"Send the Video Thumb URL\nSend /d for use default\n\nYou can direct upload thumb\nSend **No** for use default")
+    await editable.edit(f"Send the Video Thumb URL\nSend /d for use default\n\nYou can direct upload thumb")
     input6 = message = await bot.listen(editable.chat.id)
     raw_text6 = input6.text
     await input6.delete(True)
 
-    if input6.photo:
-        thumb = await input6.download()  # Use the photo sent by the user
-    elif raw_text6.startswith("http://") or raw_text6.startswith("https://"):
-        # If a URL is provided, download thumbnail from the URL
-        getstatusoutput(f"wget '{raw_text6}' -O 'thumb.jpg'")
-        thumb = "thumb.jpg"
-    else:
-        thumb = raw_text6
-
-    await editable.edit("__Please Provide Channel id or where you want to Upload video or Sent Video otherwise /d __\n\n__And make me admin in this channel then i can able to Upload otherwise i can't__")
+    await editable.edit("__Please Provide Channel id or where you want to Upload video or Sent Video otherwise /d __")
     input7: Message = await bot.listen(editable.chat.id)
     raw_text7 = input7.text
-    if "/d" in input7.text:
-        channel_id = m.chat.id
-    else:
-        channel_id = input7.text
     await input7.delete()     
     await editable.delete()
 
-    if "/d" in raw_text7:
-        batch_message = await m.reply_text(f"<b>🎯Target Batch : {b_name}</b>")
-    else:
-        try:
-            batch_message = await bot.send_message(chat_id=channel_id, text=f"<b>🎯Target Batch : {b_name}</b>")
-            await bot.send_message(chat_id=m.chat.id, text=f"<b><i>🎯Target Batch : {b_name}</i></b>\n\n🔄 Your Task is under processing, please check your Set Channel📱. Once your task is complete, I will inform you 📩")
-        except Exception as e:
-            await m.reply_text(f"**Fail Reason »** {e}\n")
-            return
-        
-    failed_count = 0
-    count =int(raw_text)    
-    arg = int(raw_text)
-    try:
-        for i in range(arg-1, len(links)):
-            Vxy = links[i][1].replace("file/d/","uc?export=download&id=").replace("www.youtube-nocookie.com/embed", "youtu.be").replace("?modestbranding=1", "").replace("/view?usp=sharing","")
-            url = "https://" + Vxy
-            link0 = "https://" + Vxy
+    # Start processing task
+    task = asyncio.create_task(
+        process_drm(
+            bot, m, x, 
+            raw_text, raw_text0, raw_text2, 
+            raw_text3, raw_text4, raw_text6, raw_text7
+        )
+    )
+    active_tasks.add(task)
+    task.add_done_callback(lambda t: active_tasks.discard(t))
 
-            name1 = links[i][0].replace("(", "[").replace(")", "]").replace("_", "").replace("\t", "").replace(":", "").replace("/", "").replace("+", "").replace("#", "").replace("|", "").replace("@", "").replace("*", "").replace(".", "").replace("https", "").replace("http", "").strip()
-            if "," in raw_text3:
-                 name = f'{PRENAME} {name1[:60]}'
+async def process_drm(
+    bot: Client, 
+    m: Message, 
+    x: str, 
+    raw_text: str, 
+    raw_text0: str, 
+    raw_text2: str, 
+    raw_text3: str, 
+    raw_text4: str, 
+    raw_text6: str, 
+    raw_text7: str
+):
+    try:
+        file_name, ext = os.path.splitext(os.path.basename(x))
+        path = f"./downloads/{m.chat.id}"
+        pdf_count = 0
+        img_count = 0
+        other_count = 0
+        
+        try:    
+            with open(x, "r") as f:
+                content = f.read()
+            content = content.split("\n")
+            
+            links = []
+            for i in content:
+                if "://" in i:
+                    url = i.split("://", 1)[1]
+                    links.append(i.split("://", 1))
+                    if ".pdf" in url:
+                        pdf_count += 1
+                    elif url.endswith((".png", ".jpeg", ".jpg")):
+                        img_count += 1
+                    else:
+                        other_count += 1
+            os.remove(x)
+        except:
+            await m.reply_text("<pre><code>🔹Invalid file input.</code></pre>")
+            os.remove(x)
+            return
+
+        if m.chat.id not in AUTH_USERS:
+            await m.reply_text(f"__Oopss! You are not a Premium member __\n__PLEASE /upgrade YOUR PLAN__\n__Your User id__ - `{m.chat.id}`\n")
+            return
+
+        if raw_text0 == '/d':
+            b_name = file_name.replace('_', ' ')
+        else:
+            b_name = raw_text0
+
+        quality = f"{raw_text2}p"
+        try:
+            if raw_text2 == "144":
+                res = "256x144"
+            elif raw_text2 == "240":
+                res = "426x240"
+            elif raw_text2 == "360":
+                res = "640x360"
+            elif raw_text2 == "480":
+                res = "854x480"
+            elif raw_text2 == "720":
+                res = "1280x720"
+            elif raw_text2 == "1080":
+                res = "1920x1080" 
+            else: 
+                res = "UN"
+        except Exception:
+                res = "UN"
+
+        if raw_text3 == '/d':
+            CR = f"{CREDIT}"
+        elif "," in raw_text3:
+            CR, PRENAME = raw_text3.split(",")
+        else:
+            CR = raw_text3
+
+        if input6.photo:
+            thumb = await input6.download()
+        elif raw_text6.startswith(("http://", "https://")):
+            getstatusoutput(f"wget '{raw_text6}' -O 'thumb.jpg'")
+            thumb = "thumb.jpg"
+        else:
+            thumb = raw_text6
+
+        if "/d" in raw_text7:
+            channel_id = m.chat.id
+        else:
+            channel_id = raw_text7
+
+        # Store task reference
+        user_tasks[m.chat.id] = {
+            'task': asyncio.current_task(),
+            'channel_id': channel_id,
+            'batch_name': b_name
+        }
+
+        if "/d" in raw_text7:
+            batch_message = await m.reply_text(f"<b>🎯Target Batch : {b_name}</b>")
+        else:
+            try:
+                batch_message = await bot.send_message(chat_id=channel_id, text=f"<b>🎯Target Batch : {b_name}</b>")
+                await bot.send_message(chat_id=m.chat.id, text=f"<b><i>🎯Target Batch : {b_name}</i></b>\n\n🔄 Your Task is under processing, please check your Set Channel📱")
+            except Exception as e:
+                await m.reply_text(f"**Fail Reason »** {e}\n")
+                return
+        
+        failed_count = 0
+        count = int(raw_text)
+        arg = int(raw_text)
+        
+        try:
+            for i in range(arg-1, len(links)):
+                Vxy = links[i][1].replace("file/d/","uc?export=download&id=").replace("www.youtube-nocookie.com/embed", "youtu.be").replace("?modestbranding=1", "").replace("/view?usp=sharing","")
+                url = "https://" + Vxy
+                link0 = "https://" + Vxy
+
+                name1 = links[i][0].replace("(", "[").replace(")", "]").replace("_", "").replace("\t", "").replace(":", "").replace("/", "").replace("+", "").replace("#", "").replace("|", "").replace("@", "").replace("*", "").replace(".", "").replace("https", "").replace("http", "").strip()
+                if "," in raw_text3:
+                    name = f'{PRENAME} {name1[:60]}'
+                else:
+                    name = f'{name1[:60]}'
+
+
             else:
                  name = f'{name1[:60]}'
             
