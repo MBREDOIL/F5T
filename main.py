@@ -419,8 +419,10 @@ async def process_drm(
             shutil.rmtree(user_folder, ignore_errors=True)
         if m.chat.id in user_tasks:
             del user_tasks[m.chat.id]
-        if thumb and os.path.exists(thumb):
-            os.remove(thumb)
+        # Use thumb_path instead of thumb
+        if thumb_path and os.path.exists(thumb_path):
+            os.remove(thumb_path)
+
 
 @bot.on_message(filters.command("addauth") & filters.private)
 async def add_auth_user(client: Client, message: Message):
@@ -644,7 +646,6 @@ async def start(bot, m: Message):
             f"🚀 You are not subscribed to any plan yet!\n\n"
             f"<blockquote>💵 Monthly Plan: free</blockquote>\n\n"
             f"If you want to buy membership of the bot, feel free to contact the Bot Admin.\n", 
-            f"If you face any problem contact -  [XOXOX](https://t.me/BOT)\n", 
             disable_web_page_preview=True, 
             reply_markup=BUTTONSCONTACT
         )
