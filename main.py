@@ -637,14 +637,14 @@ async def start(bot, m: Message):
         )
     else:
         await start_message.edit_text(
-            f" 🎉 Welcome {m.from_user.first_name} to DRM Bot! 🎉\n\n"
+            f" 🎉 Welcome {m.from_user.first_name} to DRM Bot! 🎉\n\n" +
             f"You can have access to download all Non-DRM+AES Encrypted URLs 🔐 including\n\n"
             f"Use Command : /help to get started 🌟\n\n"
             f"<blockquote>• 📚 Appx Zip+Encrypted Url\n• 🎓 Classplus DRM+ NDRM\n• 🧑‍🏫 PhysicsWallah DRM\n• 📚 CareerWill + PDF\n• 🎓 Khan GS\n• 🎓 Study Iq DRM\n• 🚀 APPX + APPX Enc PDF\n• 🎓 Vimeo Protection\n• 🎓 Brightcove Protection\n• 🎓 Visionias Protection\n• 🎓 Zoom Video\n• 🎓 Utkarsh Protection(Video + PDF)\n• 🎓 All Non DRM+AES Encrypted URLs\n• 🎓 MPD URLs if the key is known (e.g., Mpd_url?key=key XX:XX)</blockquote>\n\n"
             f"🚀 You are not subscribed to any plan yet!\n\n"
             f"<blockquote>💵 Monthly Plan: free</blockquote>\n\n"
             f"If you want to buy membership of the bot, feel free to contact the Bot Admin.\n", 
-            f"If you face any problem contact -  XOXOX\n", 
+            f"If you face any problem contact -  [XOXOX](https://t.me/BOT)\n", 
             disable_web_page_preview=True, 
             reply_markup=BUTTONSCONTACT
         )
@@ -652,7 +652,7 @@ async def start(bot, m: Message):
 @bot.on_message(filters.command(["upgrade"]))
 async def id_command(client, message: Message):
     await message.reply_text(
-        f" 🎉 Welcome {message.from_user.first_name} to DRM Bot! 🎉\n\n"
+        f" 🎉 Welcome {message.from_user.first_name} to DRM Bot! 🎉\n\n" +
         f"You can have access to download all Non-DRM+AES Encrypted URLs 🔐 including\n\n"
         f"Use Command : /help to get started 🌟\n\n"
         f"• 📚 Appx Zip+Encrypted Url\n• 🎓 Classplus DRM+ NDRM\n• 🧑‍🏫 PhysicsWallah DRM\n• 📚 CareerWill + PDF\n• 🎓 Khan GS\n• 🎓 Study Iq DRM\n• 🚀 APPX + APPX Enc PDF\n• 🎓 Vimeo Protection\n• 🎓 Brightcove Protection\n• 🎓 Visionias Protection\n• 🎓 Zoom Video\n• 🎓 Utkarsh Protection(Video + PDF)\n• 🎓 All Non DRM+AES Encrypted URLs\n• 🎓 MPD URLs if the key is known (e.g., Mpd_url?key=key XX:XX)\n\n"
@@ -799,7 +799,7 @@ async def drm_handler(bot: Client, m: Message):
         process_drm(
             bot, m, x, 
             raw_text, raw_text0, raw_text2, 
-            raw_text3, raw_text4, thumb_parh, raw_text7
+            raw_text3, raw_text4, thumb_path, raw_text7
         )
     )
     active_tasks.add(task)
