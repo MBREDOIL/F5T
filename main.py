@@ -645,14 +645,14 @@ async def start(bot, m: Message):
         )
     else:
         await start_message.edit_text(
-           f" 🎉 Welcome {m.from_user.first_name} to DRM Bot! 🎉\n\n"
-           f"You can have access to download all Non-DRM+AES Encrypted URLs 🔐 including\n\n"
-           f"Use Command : /help to get started 🌟\n\n"
-           f"<blockquote>• 📚 Appx Zip+Encrypted Url\n• 🎓 Classplus DRM+ NDRM\n• 🧑‍🏫 PhysicsWallah DRM\n• 📚 CareerWill + PDF\n• 🎓 Khan GS\n• 🎓 Study Iq DRM\n• 🚀 APPX + APPX Enc PDF\n• 🎓 Vimeo Protection\n• 🎓 Brightcove Protection\n• 🎓 Visionias Protection\n• 🎓 Zoom Video\n• 🎓 Utkarsh Protection(Video + PDF)\n• 🎓 All Non DRM+AES Encrypted URLs\n• 🎓 MPD URLs if the key is known (e.g., Mpd_url?key=key XX:XX)</blockquote>\n\n"
-           f"🚀 You are not subscribed to any plan yet!\n\n"
-           f"<blockquote>💵 Monthly Plan: free</blockquote>\n\n"
-           f"If you want to buy membership of the bot, feel free to contact the Bot Admin.\n", 
-           f"If you face any problem contact -  [XOXOX](https://t.me/BOT)\n", 
+            f" 🎉 Welcome {m.from_user.first_name} to DRM Bot! 🎉\n\n"
+            f"You can have access to download all Non-DRM+AES Encrypted URLs 🔐 including\n\n"
+            f"Use Command : /help to get started 🌟\n\n"
+            f"<blockquote>• 📚 Appx Zip+Encrypted Url\n• 🎓 Classplus DRM+ NDRM\n• 🧑‍🏫 PhysicsWallah DRM\n• 📚 CareerWill + PDF\n• 🎓 Khan GS\n• 🎓 Study Iq DRM\n• 🚀 APPX + APPX Enc PDF\n• 🎓 Vimeo Protection\n• 🎓 Brightcove Protection\n• 🎓 Visionias Protection\n• 🎓 Zoom Video\n• 🎓 Utkarsh Protection(Video + PDF)\n• 🎓 All Non DRM+AES Encrypted URLs\n• 🎓 MPD URLs if the key is known (e.g., Mpd_url?key=key XX:XX)</blockquote>\n\n"
+            f"🚀 You are not subscribed to any plan yet!\n\n"
+            f"<blockquote>💵 Monthly Plan: free</blockquote>\n\n"
+            f"If you want to buy membership of the bot, feel free to contact the Bot Admin.\n", 
+            f"If you face any problem contact -  [XOXOX](https://t.me/BOT)\n", 
             disable_web_page_preview=True, 
             reply_markup=BUTTONSCONTACT
         )
@@ -737,7 +737,7 @@ async def drm_handler(bot: Client, m: Message):
     input: Message = await bot.listen(editable.chat.id)
 
     # After (check if document exists):
-    if not input_msg.document:
+    if not input.document:
         await editable.edit("Please send a file, not text")
         return
 
