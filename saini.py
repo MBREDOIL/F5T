@@ -251,18 +251,27 @@ async def send_doc(bot: Client, m: Message, cc, ka, cc1, prog, count, name, chan
 
 async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
     # Generate thumbnail
-    thumb_path = f"{filename}.jpg"
-    subprocess.run(f'ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "{filename}"', shell=True)
-    subprocess.run(f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 "{thumb_path}"', shell=True)
+    #thumb_path = f"{filename}.jpg"
+    #subprocess.run(f'ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "{filename}"', shell=True)
+    #subprocess.run(f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 "{thumb_path}"', shell=True)
     
-    await prog.delete()
-    reply = await bot.send_message(channel_id, f"**Generate Thumbnail:**\n{name}")
+    #await prog.delete()
+    #reply = await bot.send_message(channel_id, f"**Generate Thumbnail:**\n{name}")
     
     try:
-        if thumb == "/d":
+        # Generate thumbnail if needed
+        if not thumb:
+            thumb_path = f"{filename}.jpg"
+            subprocess.run(
+                f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 "{thumb_path}" -y',
+                shell=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
             thumbnail = thumb_path
         else:
             thumbnail = thumb
+        
     except Exception as e:
         logger.error(f"Thumbnail error: {str(e)}")
         thumbnail = thumb_path
