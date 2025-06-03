@@ -663,10 +663,6 @@ async def process_drm(
                     name = f'{PRENAME} {name1[:60]}'
                 else:
                     name = f'{name1[:60]}'
-
-
-            else:
-                 name = f'{name1[:60]}'
             
                 if "visionias" in url:
                     async with ClientSession() as session:
@@ -827,71 +823,71 @@ async def process_drm(
                             time.sleep(e.x)
                             continue    
 
-                elif any(ext in url for ext in [".mp3", ".wav", ".m4a"]):
-                    try:
-                        ext = url.split('.')[-1]
-                        cmd = f'yt-dlp -o "{name}.{ext}" "{url}"'
-                        download_cmd = f"{cmd} -R 25 --fragment-retries 25"
-                        os.system(download_cmd)
-                        copy = await bot.send_document(chat_id=channel_id, document=f'{name}.{ext}', caption=ccm)
-                        count += 1
-                        os.remove(f'{name}.{ext}')
-                    except FloodWait as e:
-                        await m.reply_text(str(e))
-                        time.sleep(e.x)
-                        continue    
+                    elif any(ext in url for ext in [".mp3", ".wav", ".m4a"]):
+                        try:
+                            ext = url.split('.')[-1]
+                            cmd = f'yt-dlp -o "{name}.{ext}" "{url}"'
+                            download_cmd = f"{cmd} -R 25 --fragment-retries 25"
+                            os.system(download_cmd)
+                            copy = await bot.send_document(chat_id=channel_id, document=f'{name}.{ext}', caption=ccm)
+                            count += 1
+                            os.remove(f'{name}.{ext}')
+                        except FloodWait as e:
+                            await m.reply_text(str(e))
+                            time.sleep(e.x)
+                            continue    
                     
-                elif 'encrypted.m' in url:    
-                    Show = f"__**Video Downloading__**\n<pre><code>{str(count).zfill(3)}) {name1}</code></pre>"
-                    prog = await bot.send_message(channel_id, Show, disable_web_page_preview=True)
-                    res_file = await helper.download_and_decrypt_video(url, cmd, name, appxkey)  
-                    filename = res_file  
-                    await prog.delete(True)  
-                    await helper.send_vid(bot, m, cc, filename, thumb, name, prog, channel_id)
-                    count += 1  
-                    await asyncio.sleep(1)  
-                    continue  
+                    elif 'encrypted.m' in url:    
+                        Show = f"__**Video Downloading__**\n<pre><code>{str(count).zfill(3)}) {name1}</code></pre>"
+                        prog = await bot.send_message(channel_id, Show, disable_web_page_preview=True)
+                        res_file = await helper.download_and_decrypt_video(url, cmd, name, appxkey)  
+                        filename = res_file  
+                        await prog.delete(True)  
+                        await helper.send_vid(bot, m, cc, filename, thumb, name, prog, channel_id)
+                        count += 1  
+                        await asyncio.sleep(1)  
+                        continue  
 
-                elif 'drmcdni' in url or 'drm/wv' in url:
-                    Show = f"__**Video Downloading__**\n<pre><code>{str(count).zfill(3)}) {name1}</code></pre>"
-                    prog = await bot.send_message(channel_id, Show, disable_web_page_preview=True)
-                    res_file = await helper.decrypt_and_merge_video(mpd, keys_string, path, name, raw_text2)
-                    filename = res_file
-                    await prog.delete(True)
-                    await helper.send_vid(bot, m, cc, filename, thumb, name, prog, channel_id)
-                    count += 1
-                    await asyncio.sleep(1)
-                    continue
+                    elif 'drmcdni' in url or 'drm/wv' in url:
+                        Show = f"__**Video Downloading__**\n<pre><code>{str(count).zfill(3)}) {name1}</code></pre>"
+                        prog = await bot.send_message(channel_id, Show, disable_web_page_preview=True)
+                        res_file = await helper.decrypt_and_merge_video(mpd, keys_string, path, name, raw_text2)
+                        filename = res_file
+                        await prog.delete(True)
+                        await helper.send_vid(bot, m, cc, filename, thumb, name, prog, channel_id)
+                        count += 1
+                        await asyncio.sleep(1)
+                        continue
      
-                else:
-                    Show = f"__**Video Downloading__**\n<pre><code>{str(count).zfill(3)}) {name1}</code></pre>"
-                    prog = await bot.send_message(channel_id, Show, disable_web_page_preview=True)
-                    res_file = await helper.download_video(url, cmd, name)
-                    filename = res_file
-                    await prog.delete(True)
-                    await helper.send_vid(bot, m, cc, filename, thumb, name, prog, channel_id)
-                    count += 1
-                    time.sleep(1)
+                    else:
+                        Show = f"__**Video Downloading__**\n<pre><code>{str(count).zfill(3)}) {name1}</code></pre>"
+                        prog = await bot.send_message(channel_id, Show, disable_web_page_preview=True)
+                        res_file = await helper.download_video(url, cmd, name)
+                        filename = res_file
+                        await prog.delete(True)
+                        await helper.send_vid(bot, m, cc, filename, thumb, name, prog, channel_id)
+                        count += 1
+                        time.sleep(1)
                 
-            except Exception as e:
-                await bot.send_message(channel_id, f'⚠️**Downloading Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}\n\n<pre><i><b>Failed Reason: {str(e)}</b></i></pre>', disable_web_page_preview=True)
-                count += 1
-                failed_count += 1
-                continue
+                except Exception as e:
+                    await bot.send_message(channel_id, f'⚠️**Downloading Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}\n\n<pre><i><b>Failed Reason: {str(e)}</b></i></pre>', disable_web_page_preview=True)
+                    count += 1
+                    failed_count += 1
+                    continue
 
-    except Exception as e:
-        await m.reply_text(e)
-        time.sleep(2)
+        except Exception as e:
+            await m.reply_text(e)
+            time.sleep(2)
 
-    success_count = len(links) - failed_count
-    if raw_text7 == "/d":
-        await bot.send_message(channel_id, f"**-┈━═.•°✅ Completed ✅°•.═━┈-**\n\n**🎯 Title Name : {b_name}**\n🔗 Total URLs: {len(links)} \n┃   ┠🔴 Total Failed URLs: {failed_count}\n┃   ┠🟢 Total Successful URLs: {success_count}\n┃   ┃   ┠🎥 Total Video URLs: {other_count}\n┃   ┃   ┠📄 Total PDF URLs: {pdf_count}\n┃   ┃   ┠📸 Total IMAGE URLs: {img_count}\n")
-        #await bot.send_message(channel_id, f"**-┈━═.•°✅ Completed ✅°•.═━┈-**\n\n**🎯Batch Name : {b_name}**\n🔗 Total URLs: {len(links)} \n┃   ┠🔴 Total Failed URLs: {failed_count}\n┃   ┠🟢 Total Successful URLs: {success_count}\n┃   ┃   ┠🎥 Total Video URLs: {other_count}\n┃   ┃   ┠📄 Total PDF URLs: {pdf_count}\n┃   ┃   ┠📸 Total IMAGE URLs: {img_count}\n")
+        success_count = len(links) - failed_count
+        if raw_text7 == "/d":
+            #await bot.send_message(channel_id, f"**-┈━═.•°✅ Completed ✅°•.═━┈-**\n\n**🎯 Title Name : {b_name}**\n🔗 Total URLs: {len(links)} \n┃   ┠🔴 Total Failed URLs: {failed_count}\n┃   ┠🟢 Total Successful URLs: {success_count}\n┃   ┃   ┠🎥 Total Video URLs: {other_count}\n┃   ┃   ┠📄 Total PDF URLs: {pdf_count}\n┃   ┃   ┠📸 Total IMAGE URLs: {img_count}\n")
+            await bot.send_message(channel_id, f"**-┈━═.•°✅ Completed ✅°•.═━┈-**\n\n**🎯Batch Name : {b_name}**\n🔗 Total URLs: {len(links)} \n┃   ┠🔴 Total Failed URLs: {failed_count}\n┃   ┠🟢 Total Successful URLs: {success_count}\n┃   ┃   ┠🎥 Total Video URLs: {other_count}\n┃   ┃   ┠📄 Total PDF URLs: {pdf_count}\n┃   ┃   ┠📸 Total IMAGE URLs: {img_count}\n")
     
-    else:
-        await bot.send_message(channel_id, f"**-┈━═.•°✅ Completed ✅°•.═━┈-**\n\n**🎯Title Name : {b_name}**\n🔗 Total URLs: {len(links)} \n┃   ┠🔴 Total Failed URLs: {failed_count}\n┃   ┠🟢 Total Successful URLs: {success_count}\n┃   ┃   ┠🎥 Total Video URLs: {other_count}\n┃   ┃   ┠📄 Total PDF URLs: {pdf_count}\n┃   ┃   ┠📸 Total IMAGE URLs: {img_count}\n")
-        #await bot.send_message(channel_id, f"**-┈━═.•°✅ Completed ✅°•.═━┈-**\n\n**🎯Batch Name : {b_name}**\n<blockquote>🔗 Total URLs: {len(links)} \n┃   ┠🔴 Total Failed URLs: {failed_count}\n┃   ┠🟢 Total Successful URLs: {success_count}\n┃   ┃   ┠🎥 Total Video URLs: {other_count}\n┃   ┃   ┠📄 Total PDF URLs: {pdf_count}\n┃   ┃   ┠📸 Total IMAGE URLs: {img_count}</blockquote>\n")
-        await bot.send_message(m.chat.id, f"<blockquote><b>✅ Your Task is completed, please check your Set Channel📱</b></blockquote>")
+        else:
+            #await bot.send_message(channel_id, f"**-┈━═.•°✅ Completed ✅°•.═━┈-**\n\n**🎯Title Name : {b_name}**\n🔗 Total URLs: {len(links)} \n┃   ┠🔴 Total Failed URLs: {failed_count}\n┃   ┠🟢 Total Successful URLs: {success_count}\n┃   ┃   ┠🎥 Total Video URLs: {other_count}\n┃   ┃   ┠📄 Total PDF URLs: {pdf_count}\n┃   ┃   ┠📸 Total IMAGE URLs: {img_count}\n")
+            await bot.send_message(channel_id, f"**-┈━═.•°✅ Completed ✅°•.═━┈-**\n\n**🎯Batch Name : {b_name}**\n<blockquote>🔗 Total URLs: {len(links)} \n┃   ┠🔴 Total Failed URLs: {failed_count}\n┃   ┠🟢 Total Successful URLs: {success_count}\n┃   ┃   ┠🎥 Total Video URLs: {other_count}\n┃   ┃   ┠📄 Total PDF URLs: {pdf_count}\n┃   ┃   ┠📸 Total IMAGE URLs: {img_count}</blockquote>\n")
+            await bot.send_message(m.chat.id, f"<blockquote><b>✅ Your Task is completed, please check your Set Channel📱</b></blockquote>")
 
 
 @bot.on_message(filters.text & filters.private)
