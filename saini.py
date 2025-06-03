@@ -279,7 +279,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
             duration=dur,
             progress=progress_bar, 
             progress_args=(reply, start_time)
-    except Exception as e:
+        except Exception as e:
         logger.warning(f"Video upload failed, sending as document: {str(e)}")
         await bot.send_document(
             channel_id, filename, 
