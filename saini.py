@@ -284,6 +284,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
     start_time = time.time()
 
     try:
+        reply = await bot.send_message(channel_id, f"**Generate Thumbnail:**\n{name}")
         await bot.send_video(
             channel_id, filename, 
             caption=cc, 
