@@ -89,7 +89,7 @@ async def process_drm(
     raw_text2: str, 
     raw_text3: str, 
     raw_text4: str, 
-    thumb_path: str, 
+    thumb: str, 
     raw_text7: str
 ):
     try:
@@ -419,9 +419,8 @@ async def process_drm(
             shutil.rmtree(user_folder, ignore_errors=True)
         if m.chat.id in user_tasks:
             del user_tasks[m.chat.id]
-        # Use thumb_path instead of thumb
-        if thumb_path and os.path.exists(thumb_path):
-            os.remove(thumb_path)
+        if thumb and os.path.exists(thumb):
+            os.remove(thumb)
 
 
 @bot.on_message(filters.command("addauth") & filters.private)
@@ -779,14 +778,14 @@ async def drm_handler(bot: Client, m: Message):
     await input6.delete()
 
     # Handle thumbnail
-    thumb_path = None
+    thumb = None
     if input6.photo:
-        thumb_path = await input6.download()
+        thumb = await input6.download()
     elif raw_text6.startswith("http"):
-        thumb_path = f"thumb_{m.chat.id}.jpg"
-        status = subprocess.call(f"wget '{raw_text6}' -O '{thumb_path}'", shell=True)
-        if status != 0 or not os.path.exists(thumb_path):
-            thumb_path = None
+        thumb = f"thumb_{m.chat.id}.jpg"
+        status = subprocess.call(f"wget '{raw_text6}' -O '{thumb}'", shell=True)
+        if status != 0 or not os.path.exists(thumb):
+            thumb = None
     
 
     await editable.edit("__Please Provide Channel id or where you want to Upload video or Sent Video otherwise /d __")
@@ -800,7 +799,7 @@ async def drm_handler(bot: Client, m: Message):
         process_drm(
             bot, m, x, 
             raw_text, raw_text0, raw_text2, 
-            raw_text3, raw_text4, thumb_path, raw_text7
+            raw_text3, raw_text4, thumb, raw_text7
         )
     )
     active_tasks.add(task)
