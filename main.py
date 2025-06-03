@@ -89,7 +89,7 @@ async def process_drm(
     raw_text2: str, 
     raw_text3: str, 
     raw_text4: str, 
-    raw_text6: str, 
+    thumb_path: str, 
     raw_text7: str
 ):
     try:
@@ -156,14 +156,6 @@ async def process_drm(
             CR, PRENAME = raw_text3.split(",")
         else:
             CR = raw_text3
-
-        
-        #thumb = None
-        #if raw_text6 != "/d" and (raw_text6.startswith("http://") or raw_text6.startswith("https://")):
-            thumb_path = f"thumb_{m.chat.id}.jpg"
-            status, _ = getstatusoutput(f"wget '{raw_text6}' -O '{thumb_path}'")
-            if status == 0 and os.path.exists(thumb_path):
-                thumb = thumb_path
 
         if raw_text7 == "/d":
             channel_id = m.chat.id
@@ -652,7 +644,7 @@ async def start(bot, m: Message):
             f"🚀 You are not subscribed to any plan yet!\n\n"
             f"<blockquote>💵 Monthly Plan: free</blockquote>\n\n"
             f"If you want to buy membership of the bot, feel free to contact the Bot Admin.\n", 
-            f"If you face any problem contact -  [XOXOX](https://t.me/BOT)\n", 
+            f"If you face any problem contact -  XOXOX\n", 
             disable_web_page_preview=True, 
             reply_markup=BUTTONSCONTACT
         )
@@ -770,7 +762,7 @@ async def drm_handler(bot: Client, m: Message):
     raw_text2 = input2.text
     await input2.delete(True)
 
-    await editable.edit("__Enter the credit name for the caption.__")
+    await editable.edit("__Enter credit name or send /d for default.__")
     input3: Message = await bot.listen(editable.chat.id)
     raw_text3 = input3.text
     await input3.delete(True)
@@ -780,20 +772,21 @@ async def drm_handler(bot: Client, m: Message):
     raw_text4 = input4.text
     await input4.delete(True)
 
-
-    await editable.edit(f"Send the Video Thumb URL\nSend /d for use default\n\nYou can direct upload thumb\nSend **No** for use default")
-    input6 = message = await bot.listen(editable.chat.id)
+    await editable.edit("Send thumbnail Photo and URL or /d for default")
+    input6 = await bot.listen(editable.chat.id)
     raw_text6 = input6.text
-    await input6.delete(True)
+    await input6.delete()
 
+    # Handle thumbnail
+    thumb_path = None
     if input6.photo:
-        thumb = await input6.download()  # Use the photo sent by the user
-    elif raw_text6.startswith("http://") or raw_text6.startswith("https://"):
-        # If a URL is provided, download thumbnail from the URL
-        getstatusoutput(f"wget '{raw_text6}' -O 'thumb.jpg'")
-        thumb = "thumb.jpg"
-    else:
-        thumb = raw_text6
+        thumb_path = await input6.download()
+    elif raw_text6.startswith("http"):
+        thumb_path = f"thumb_{m.chat.id}.jpg"
+        status = subprocess.call(f"wget '{raw_text6}' -O '{thumb_path}'", shell=True)
+        if status != 0 or not os.path.exists(thumb_path):
+            thumb_path = None
+    
 
     await editable.edit("__Please Provide Channel id or where you want to Upload video or Sent Video otherwise /d __")
     input7: Message = await bot.listen(editable.chat.id)
@@ -806,7 +799,7 @@ async def drm_handler(bot: Client, m: Message):
         process_drm(
             bot, m, x, 
             raw_text, raw_text0, raw_text2, 
-            raw_text3, raw_text4, raw_text6, raw_text7
+            raw_text3, raw_text4, thumb_parh, raw_text7
         )
     )
     active_tasks.add(task)
