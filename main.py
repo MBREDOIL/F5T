@@ -302,7 +302,8 @@ async def process_drm(
                             if not success:
                                 failed_count += 1
                                 await bot.send_message(channel_id, f'⚠️**PDF Download Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}')
-                            
+                                count += 1
+                                
                         else:
                             try:
                                 success = await helper.pdf_download(url, f'{name}.pdf')
@@ -317,7 +318,8 @@ async def process_drm(
                             except Exception as e:
                                 failed_count += 1
                                 await bot.send_message(channel_id, f'⚠️**PDF Download Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}\n**Error:** {str(e)}')
-
+                                count += 1
+                                
                     elif ".ws" in url and url.endswith(".ws"):
                         try:
                             await helper.pdf_download(f"{api_url}utkash-ws?url={url}&authorization={api_token}", f"{name}.html")
@@ -327,6 +329,7 @@ async def process_drm(
                         except Exception:
                             failed_count += 1
                             await bot.send_message(channel_id, f'⚠️**HTML Download Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}')
+                            count += 1
                             
                     elif any(ext in url for ext in [".jpg", ".jpeg", ".png"]):
                         try:
@@ -339,7 +342,8 @@ async def process_drm(
                         except Exception:
                             failed_count += 1
                             await bot.send_message(channel_id, f'⚠️**Image Download Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}')
-
+                            count += 1
+                            
                     elif any(ext in url for ext in [".mp3", ".wav", ".m4a"]):
                         try:
                             ext = url.split('.')[-1]
@@ -362,6 +366,7 @@ async def process_drm(
                         else:
                             failed_count += 1
                             await bot.send_message(channel_id, f'⚠️**Video Download Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}')
+                            count += 1
                         await prog.delete()
                         await asyncio.sleep(1)
                         continue  
@@ -376,6 +381,7 @@ async def process_drm(
                         else:
                             failed_count += 1
                             await bot.send_message(channel_id, f'⚠️**Video Download Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}')
+                            count += 1
                         await prog.delete()
                         await asyncio.sleep(1)
                         continue
@@ -390,6 +396,7 @@ async def process_drm(
                         else:
                             failed_count += 1
                             await bot.send_message(channel_id, f'⚠️**Video Download Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}')
+                            count += 1
                         await prog.delete()
                         await asyncio.sleep(1)
                 
