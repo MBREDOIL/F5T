@@ -306,27 +306,6 @@ async def send_vvid(bot: Client, m: Message, cc, filename, thumb, name, prog, ch
     if os.path.exists(thumb_path):
         os.remove(thumb_path)
 
-# [Previous imports remain the same...]
-
-async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
-    try:
-        # Generate thumbnail if needed
-        if not thumb:
-            thumb_path = f"{filename}.jpg"
-            subprocess.run(
-                f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 "{thumb_path}" -y',
-                shell=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
-            thumbnail = thumb_path
-        else:
-            thumbnail = thumb
-        
-        # Check file size
-        file_size = os.path.getsize(filename)
-        max_size = 1.8 * 1024 * 1024 * 1024  # 1.8 GB in bytes
-
 
 async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
     try:
