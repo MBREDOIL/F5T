@@ -327,6 +327,26 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
         file_size = os.path.getsize(filename)
         max_size = 1.8 * 1024 * 1024 * 1024  # 1.8 GB in bytes
 
+
+async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
+    try:
+        # Generate thumbnail if needed
+        if not thumb:
+            thumb_path = f"{filename}.jpg"
+            subprocess.run(
+                f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 "{thumb_path}" -y',
+                shell=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+            thumbnail = thumb_path
+        else:
+            thumbnail = thumb
+
+        # Check file size
+        file_size = os.path.getsize(filename)
+        max_size = 1.8 * 1024 * 1024 * 1024  # 1.8 GB in bytes
+
         if file_size <= max_size:
             # If under 1.8GB, send normally
             dur = int(duration(filename))
@@ -344,6 +364,7 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
                     duration=dur,
                     progress=progress_bar, 
                     progress_args=(reply, start_time)
+                )
             except Exception as e:
                 logger.warning(f"Video upload failed, sending as document: {str(e)}")
                 await bot.send_document(
@@ -351,7 +372,8 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
                     filename, 
                     caption=cc,
                     progress=progress_bar, 
-                    progress_args=(reply, start_time))
+                    progress_args=(reply, start_time)
+                )
             finally:
                 await reply.delete()
                 if os.path.exists(filename):
@@ -388,7 +410,8 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
                         thumb=thumbnail, 
                         duration=part_dur,
                         progress=progress_bar, 
-                        progress_args=(reply, start_time))
+                        progress_args=(reply, start_time)
+                    )
                 except Exception as e:
                     logger.warning(f"Video upload failed, sending as document: {str(e)}")
                     await bot.send_document(
@@ -396,7 +419,8 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
                         part_file, 
                         caption=f"{cc}\n\nPart {part_number}",
                         progress=progress_bar, 
-                        progress_args=(reply, start_time))
+                        progress_args=(reply, start_time)
+                    )
                 os.remove(part_file)
                 part_number += 1
                 start += target_duration
@@ -406,4 +430,6 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
                 os.remove(filename)
             if os.path.exists(thumbnail):
                 os.remove(thumbnail)
+    except Exception as e:
+        logger.error(f"send_vid failed: {str(e)}")
 
