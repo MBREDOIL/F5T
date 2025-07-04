@@ -270,12 +270,12 @@ async def process_drm(
      
 
                 try:
-                    cc = f'**{str(count).zfill(3)} Video Title :** `{name1}.mkv`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » `{CR}`**\n'
-                    cc1 = f'**{str(count).zfill(3)}: File Title :** `{name1}.pdf`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » `{CR}`**\n'
-                    cczip = f'**{str(count).zfill(3)}: Zip Title :** `{name1}.zip`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » `{CR}`**\n' 
-                    ccimg = f'**{str(count).zfill(3)}: Img Title :** `{name1}.jpg`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » `{CR}`**\n'
-                    ccm = f'**{str(count).zfill(3)}: Audio Title :** `{name1}.mp3`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » `{CR}`**\n'
-                    cchtml = f'**{str(count).zfill(3)}: Html Title :** `{name1}.html`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » `{CR}`**\n'
+                    cc = f'**{str(count).zfill(3)}. Video Title :** `{name1}.mkv`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » `{CR}`**\n'
+                    cc1 = f'**{str(count).zfill(3)}. File Title :** `{name1}.pdf`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » `{CR}`**\n'
+                    cczip = f'**{str(count).zfill(3)}. Zip Title :** `{name1}.zip`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » `{CR}`**\n' 
+                    ccimg = f'**{str(count).zfill(3)}. Img Title :** `{name1}.jpg`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » `{CR}`**\n'
+                    ccm = f'**{str(count).zfill(3)}. Audio Title :** `{name1}.mp3`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » `{CR}`**\n'
+                    cchtml = f'**{str(count).zfill(3)}. Html Title :** `{name1}.html`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » `{CR}`**\n'
                   
                     if "drive" in url:
                         try:
