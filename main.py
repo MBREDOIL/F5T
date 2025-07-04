@@ -270,12 +270,12 @@ async def process_drm(
      
 
                 try:
-                    cc = f'[🎥]Vid Id : {str(count).zfill(3)}\n**Video Title :** `{name1} [{res}p] .mkv`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » **`{CR}`\n'
-                    cc1 = f'[📕]Pdf Id : {str(count).zfill(3)}\n**File Title :** `{name1} .pdf`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » **`{CR}`\n'
-                    cczip = f'[📁]Zip Id : {str(count).zfill(3)}\n**Zip Title :** `{name1} .zip`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » **`{CR}`\n' 
-                    ccimg = f'[🖼️]Img Id : {str(count).zfill(3)}\n**Img Title :** `{name1} .jpg`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » **`{CR}`\n'
-                    ccm = f'[🎵]Audio Id : {str(count).zfill(3)}\n**Audio Title :** `{name1} .mp3`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » **`{CR}`\n'
-                    cchtml = f'[🌐]Html Id : {str(count).zfill(3)}\n**Html Title :** `{name1} .html`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » **`{CR}`\n'
+                    cc = f'**{str(count).zfill(3)} Video Title :** `{name1}.mkv`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » `{CR}`**\n'
+                    cc1 = f'**{str(count).zfill(3)}: File Title :** `{name1}.pdf`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » `{CR}`**\n'
+                    cczip = f'**{str(count).zfill(3)}: Zip Title :** `{name1}.zip`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » `{CR}`**\n' 
+                    ccimg = f'**{str(count).zfill(3)}: Img Title :** `{name1}.jpg`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » `{CR}`**\n'
+                    ccm = f'**{str(count).zfill(3)}: Audio Title :** `{name1}.mp3`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » `{CR}`**\n'
+                    cchtml = f'**{str(count).zfill(3)}: Html Title :** `{name1}.html`\n\n<pre><code>**Batch Name :** {b_name}</code></pre>\n\n**Extracted by » `{CR}`**\n'
                   
                     if "drive" in url:
                         try:
