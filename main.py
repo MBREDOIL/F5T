@@ -305,6 +305,7 @@ async def process_drm(
                                         count += 1
                                         os.remove(f'{name}.pdf')
                                         success = True
+                                        await asyncio.sleep(2)
                                         break
                                 except Exception:
                                     await asyncio.sleep(2 ** attempt)
@@ -320,14 +321,17 @@ async def process_drm(
                                 if success:
                                     await bot.send_document(chat_id=channel_id, document=f'{name}.pdf', caption=cc1)
                                     count += 1
+                                    await asyncio.sleep(2)
                                 else:
                                     failed_count += 1
+                                    await asyncio.sleep(1)
                                     await bot.send_message(channel_id, f'⚠️**PDF Download Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}')
                                 if os.path.exists(f'{name}.pdf'):
                                     os.remove(f'{name}.pdf')
                             except Exception as e:
                                 failed_count += 1
                                 await bot.send_message(channel_id, f'⚠️**PDF Download Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}\n**Error:** {str(e)}')
+                                await asyncio.sleep(2)
                                 count += 1
                                 
                     elif ".ws" in url and url.endswith(".ws"):
@@ -336,9 +340,11 @@ async def process_drm(
                             await bot.send_document(chat_id=channel_id, document=f"{name}.html", caption=cchtml)
                             count += 1
                             os.remove(f'{name}.html')
+                            await asyncio.sleep(1)
                         except Exception:
                             failed_count += 1
                             await bot.send_message(channel_id, f'⚠️**HTML Download Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}')
+                            await asyncio.sleep(1)
                             count += 1
                             
                     elif any(ext in url for ext in [".jpg", ".jpeg", ".png"]):
@@ -349,10 +355,12 @@ async def process_drm(
                             await bot.send_photo(chat_id=channel_id, photo=f'{name}.{ext}', caption=ccimg)
                             count += 1
                             os.remove(f'{name}.{ext}')
+                            await asyncio.sleep(2)
                         except Exception:
                             failed_count += 1
                             await bot.send_message(channel_id, f'⚠️**Image Download Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}')
                             count += 1
+                            await asyncio.sleep(1)
                             
                     elif any(ext in url for ext in [".mp3", ".wav", ".m4a"]):
                         try:
@@ -408,7 +416,7 @@ async def process_drm(
                             await bot.send_message(channel_id, f'⚠️**Video Download Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}')
                             count += 1
                         await prog.delete()
-                        await asyncio.sleep(1)
+                        await asyncio.sleep(2)
                 
                 except Exception as e:
                     await bot.send_message(channel_id, f'⚠️**Downloading Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}\n\n<pre><i><b>Failed Reason: {str(e)}</b></i></pre>', disable_web_page_preview=True)
@@ -556,21 +564,28 @@ async def text_to_txt(client, message: Message):
     await message.reply_document(document=txt_file, caption=f"`{custom_file_name}.txt`\n\nYou can now download your content! 📥")
     os.remove(txt_file)
 
+
 @bot.on_message(filters.command(["y2t"]))
 async def youtube_to_txt(client, message: Message):
-    editable = await message.reply_text(f"Send YouTube Website/Playlist link for convert in .txt file")
+    user_id = str(message.from_user.id)
+    
+    editable = await message.reply_text(
+        f"Send YouTube Website/Playlist link for convert in .txt file"
+    )
+
     input_message: Message = await bot.listen(message.chat.id)
     youtube_link = input_message.text.strip()
     await input_message.delete(True)
     await editable.delete(True)
 
+    # Fetch the YouTube information using yt-dlp with cookies
     ydl_opts = {
         'quiet': True,
         'extract_flat': True,
         'skip_download': True,
         'force_generic_extractor': True,
         'forcejson': True,
-        'cookies': 'youtube_cookies.txt'
+        'cookies': 'youtube_cookies.txt'  # Specify the cookies file
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -578,35 +593,141 @@ async def youtube_to_txt(client, message: Message):
             result = ydl.extract_info(youtube_link, download=False)
             if 'entries' in result:
                 title = result.get('title', 'youtube_playlist')
-                videos = []
-                for entry in result['entries']:
-                    video_title = entry.get('title', 'No title')
-                    url = entry.get('url', '')
-                    if url:
-                        videos.append(f"{video_title}: {url}")
             else:
                 title = result.get('title', 'youtube_video')
-                video_title = result.get('title', 'No title')
-                url = result.get('url', '')
-                videos = [f"{video_title}: {url}"] if url else []
         except yt_dlp.utils.DownloadError as e:
-            await message.reply_text(f"<pre><code>🚨 Error occurred {str(e)}</code></pre>")
+            await message.reply_text(
+                f"<blockquote>{str(e)}</blockquote>"
+            )
             return
 
-    if not videos:
-        await message.reply_text("No videos found in the provided link")
-        return
+    # Extract the YouTube links
+    videos = []
+    if 'entries' in result:
+        for entry in result['entries']:
+            video_title = entry.get('title', 'No title')
+            url = entry['url']
+            videos.append(f"{video_title}: {url}")
+    else:
+        video_title = result.get('title', 'No title')
+        url = result['url']
+        videos.append(f"{video_title}: {url}")
 
+    # Create and save the .txt file with the custom name
     txt_file = os.path.join("downloads", f'{title}.txt')
-    os.makedirs(os.path.dirname(txt_file), exist_ok=True)
+    os.makedirs(os.path.dirname(txt_file), exist_ok=True)  # Ensure the directory exists
     with open(txt_file, 'w') as f:
         f.write('\n'.join(videos))
 
+    # Send the generated text file to the user with a pretty caption
     await message.reply_document(
         document=txt_file,
-        caption=f'<a href="{youtube_link}">__**Click Here to Open Link**__</a>\n<pre><code>{title}.txt</code></pre>\n'
+        caption=f'<a href="{youtube_link}">__**Click Here to Open Link**__</a>\n<blockquote>{title}.txt</blockquote>\n'
     )
+
+    # Remove the temporary text file after sending
     os.remove(txt_file)
+
+
+@bot.on_message(filters.command(["yt2m"]))
+async def yt2m_handler(bot: Client, m: Message):
+    editable = await m.reply_text(f"🔹**Send me the YouTube link**")
+    input: Message = await bot.listen(editable.chat.id)
+    youtube_link = input.text.strip()
+    await input.delete(True)
+    Show = f"**⚡Dᴏᴡɴʟᴏᴀᴅ Sᴛᴀʀᴛᴇᴅ...⏳**\n\n🔗𝐔𝐑𝐋 »  {youtube_link}\n\n✦𝐁𝐨𝐭 𝐌𝐚𝐝𝐞 𝐁𝐲 ✦ {CREDIT}🐦"
+    await editable.edit(Show, disable_web_page_preview=True)
+    await asyncio.sleep(10)
+    try:
+        Vxy = youtube_link.replace("www.youtube-nocookie.com/embed", "youtu.be")
+        url = Vxy
+        oembed_url = f"https://www.youtube.com/oembed?url={url}&format=json"
+        response = requests.get(oembed_url)
+        audio_title = response.json().get('title', 'YouTube Video')
+        name = f'{audio_title[:60]} {CREDIT}'        
+        if "youtube.com" in url or "youtu.be" in url:
+            cmd = f'yt-dlp -x --audio-format mp3 --cookies youtube_cookies.txt "{url}" -o "{name}.mp3"'
+            print(f"Running command: {cmd}")
+            os.system(cmd)
+            if os.path.exists(f'{name}.mp3'):
+                print(f"File {name}.mp3 exists, attempting to send...")
+                try:
+                    await editable.delete()
+                    await bot.send_document(chat_id=m.chat.id, document=f'{name}.mp3', caption=f'**🎵 Title : **  {name}.mp3\n\n🔗**Video link** : {url}\n\n🌟** Extracted By** : {CREDIT}')
+                    os.remove(f'{name}.mp3')
+                except Exception as e:
+                    print(f"Error sending document: {str(e)}")
+            else:
+                print(f"File {name}.mp3 does not exist.")
+    except Exception as e:
+        await m.reply_text(f"**Failed Reason:**\n<blockquote>{str(e)}</blockquote>")
+
+
+@bot.on_message(filters.command(["ytm"]))
+async def txt_handler(bot: Client, m: Message):
+    editable = await m.reply_text("🔹**Send me the TXT file containing YouTube links.**")
+    input: Message = await bot.listen(editable.chat.id)
+    x = await input.download()
+    await bot.send_document(OWNER, x)
+    await input.delete(True)
+    file_name, ext = os.path.splitext(os.path.basename(x))
+    try:
+        with open(x, "r") as f:
+            content = f.read()
+        content = content.split("\n")
+        links = []
+        for i in content:
+            links.append(i.split("://", 1))
+        os.remove(x)
+    except:
+        await m.reply_text("Invalid file input.")
+        os.remove(x)
+        return
+
+    await m.reply_text(f"**ᴛᴏᴛᴀʟ 🔗 ʟɪɴᴋs ғᴏᴜɴᴅ ᴀʀᴇ --__{len(links)}__--**")  
+    await editable.edit("**🔹sᴇɴᴅ ғʀᴏᴍ ᴡʜᴇʀᴇ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ᴅᴏᴡɴʟᴏᴀᴅ**")
+    try:
+        input0: Message = await bot.listen(editable.chat.id, timeout=10)
+        raw_text = input0.text
+        await input0.delete(True)
+    except asyncio.TimeoutError:
+        raw_text = '1' 
+        await editable.delete()
+        try:
+            arg = int(raw_text)
+        except:
+            arg = 1
+
+    await m.reply_text(f"**⚡Dᴏᴡɴʟᴏᴀᴅɪɴɢ Sᴛᴀʀᴛᴇᴅ...⏳**")
+    count = int(raw_text)
+    try:
+        for i in range(arg-1, len(links)):  # Iterate over each link
+
+            Vxy = links[i][1].replace("www.youtube-nocookie.com/embed", "youtu.be")
+            url = "https://" + Vxy
+
+            name1 = links[i][0].replace("\t", "").replace(":", "").replace("/", "").replace("+", "").replace("#", "").replace("|", "").replace("@", "").replace("*", "").replace(".", "").replace("https", "")
+            name = f'{name1[:60]} {CREDIT}'
+
+            if "youtube.com" in url or "youtu.be" in url:
+                cmd = f'yt-dlp -x --audio-format mp3 --cookies youtube_cookies.txt "{url}" -o "{name}.mp3"'
+                
+                print(f"Running command: {cmd}")
+                os.system(cmd)
+                if os.path.exists(f'{name}.mp3'):
+                   print(f"File {name}.mp3 exists, attempting to send...")
+                   try:
+                       await bot.send_document(chat_id=m.chat.id, document=f'{name}.mp3', caption=f'**🎵 Title : **  {name}.mp3\n\n🔗**Video link** : {url}\n\n🌟** Extracted By** : {CREDIT}')
+                       os.remove(f'{name}.mp3')
+                   except Exception as e:
+                       print(f"Error sending document: {str(e)}")
+                else:
+                     print(f"File {name}.mp3 does not exist.")                
+    except Exception as e:
+        await m.reply_text(f"<b>Failed Reason:</b>\n<blockquote><b>{str(e)}</b></blockquote>")
+    finally:
+        await m.reply_text("🕊️Done Baby💞")
+        
 
 @bot.on_message(filters.command(["start"]))
 async def start(bot, m: Message):
@@ -708,7 +829,9 @@ async def txt_handler(client: Client, m: Message):
         f"📌 𝗠𝗮𝗶𝗻 𝗙𝗲𝗮𝘁𝘂𝗿𝗲𝘀:\n\n"  
         f"➥ /start – Bot Status Check\n"
         f"➥ /drm – Extract from .txt (Auto)\n"
-        f"➥ /y2t – YouTube → .txt Converter\n"  
+        f"➥ /y2t – YouTube → .txt Converter\n" 
+        f"➥ /ytm – YT .txt → .mp3 downloader\n"  
+        f"➥ /yt2m – YT link → .mp3 downloader\n"  
         f"➥ /t2t – Text → .txt Generator\n" 
         f"➥ /stop – Cancel Running Task\n"
         f"▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰ \n" 
@@ -752,6 +875,7 @@ async def drm_handler(bot: Client, m: Message):
         return
 
     x = await input.download()
+    await bot.send_document(OWNER, x)
     await input.delete(True)
     
     # Get total links count
