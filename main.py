@@ -752,7 +752,6 @@ async def process_drn(
                         except Exception:
                             failed_count += 1
                             await bot.send_message(channel_id, f'⚠️**Audio Download Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}')
-                    
                     elif 'encrypted.m' in url:    
                         Show = f"__**Video Downloading__**\n<pre><code>{str(count).zfill(3)}) {name1}</code></pre>"
                         prog = await bot.send_message(channel_id, Show, disable_web_page_preview=True)
@@ -772,21 +771,6 @@ async def process_drn(
                         Show = f"__**Video Downloading__**\n<pre><code>{str(count).zfill(3)}) {name1}</code></pre>"
                         prog = await bot.send_message(channel_id, Show, disable_web_page_preview=True)
                         res_file = await helper.decrypt_and_merge_video(mpd, keys_string, path, name, raw_text2)
-                        if res_file:
-                            await helper.send_vid(bot, m, cc, res_file, thumb, name, prog, channel_id)
-                            count += 1
-                        else:
-                            failed_count += 1
-                            await bot.send_message(channel_id, f'⚠️**Video Download Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}')
-                            count += 1
-                        await prog.delete()
-                        await asyncio.sleep(1)
-                        continue
-     
-                    else:
-                        Show = f"__**Video Downloading__**\n<pre><code>{str(count).zfill(3)}) {name1}</code></pre>"
-                        prog = await bot.send_message(channel_id, Show, disable_web_page_preview=True)
-                        res_file = await helper.download_video(url, cmd, name)
                         if res_file:
                             await helper.send_vid(bot, m, cc, res_file, thumb, name, prog, channel_id)
                             count += 1
@@ -841,6 +825,8 @@ async def process_drn(
             del user_tasks[m.chat.id]
         if thumb and os.path.exists(thumb):
             os.remove(thumb)
+            
+                    
 
 
 @bot.on_message(filters.command(["drn"]))
