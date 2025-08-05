@@ -26,10 +26,10 @@ from pytube import YouTube
 from aiohttp import web
 import random
 from pyromod import listen
-from pyrogram import Client, filters
-from pyrogram.types import Message
-from pyrogram.errors import FloodWait
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrofork import Client, filters
+from pyrofork.types import Message
+from pyrofork.errors import FloodWait
+from pyrofork.types import InlineKeyboardButton, InlineKeyboardMarkup
 import aiohttp
 import aiofiles
 import zipfile
@@ -42,7 +42,10 @@ bot = Client(
     "bot",
     api_id=API_ID,
     api_hash=API_HASH,
-    bot_token=BOT_TOKEN
+    bot_token=BOT_TOKEN,
+    sleep_threshold=30,
+    max_concurrent_transmissions=5,
+    workers=8
 )
 
 cookies_file_path = os.getenv("cookies_file_path", "youtube_cookies.txt")
