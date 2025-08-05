@@ -3,7 +3,7 @@ import time
 import math 
 import os 
 from vars import CREDIT 
-from pyrogram.errors import FloodWait 
+from pyrofork.errors import FloodWait 
 from datetime import datetime,timedelta 
 
 class Timer: 
@@ -104,3 +104,4 @@ async def progress_bar(current, total, reply, start):
                 #await reply.edit(f'`╭──⌯═════𝐁𝐨𝐭 𝐒𝐭𝐚𝐭𝐢𝐜𝐬══════⌯──╮\n├⚡ {progress_bar}\n├⚙️ Progress ➤ | {perc} |\n├🚀 Speed ➤ | {sp} |\n├📟 Processed ➤ | {cur} |\n├🧲 Size ➤ | {tot} |\n├🕑 ETA ➤ | {eta} |\n╰─═══✨🦋𝙎𝘼𝙊𝙏𝙎🦋✨═══─╯`') 
             except FloodWait as e: 
                 time.sleep(e.x)  
+
