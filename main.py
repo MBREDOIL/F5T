@@ -26,10 +26,10 @@ from pytube import YouTube
 from aiohttp import web
 import random
 from pyromod import listen
-from pyrofork import Client, filters
-from pyrofork.types import Message
-from pyrofork.errors import FloodWait
-from pyrofork.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrofork import Client
+from pyrogram.types import Message, filters
+from pyrogram.errors import FloodWait
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 import aiohttp
 import aiofiles
 import zipfile
