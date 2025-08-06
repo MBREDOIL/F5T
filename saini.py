@@ -13,8 +13,8 @@ import subprocess
 import concurrent.futures
 from math import ceil
 from utils import progress_bar
-from pyrofork import Client, filters
-from pyrofork.types import Message
+from pyrogram import Client, filters
+from pyrogram.types import Message
 from io import BytesIO
 from pathlib import Path  
 from Crypto.Cipher import AES
