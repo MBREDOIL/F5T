@@ -209,7 +209,7 @@ async def process_drm(
 
                 elif "https://cpvod.testbook.com/" in url:
                     url = url.replace("https://cpvod.testbook.com/","https://media-cdn.classplusapp.com/drm/")
-                    url = f"https://cpapi-rjbs-1l0p.onrender.com/extract_keys?url={url}@bots_updatee&user_id=5830856952"
+                    url = f"https://cpapi-ytas.onrender.com/extract_keys?url={url}@bots_updatee&user_id=5830856952"
                     #url = f"https://drmapijion-botupdatevip.vercel.app/api?url={url}&token={raw_text4}"
                     #url = 'https://dragoapi.vercel.app/classplus?link=' + url
                     mpd, keys = helper.get_mps_and_keys(url)
@@ -217,7 +217,7 @@ async def process_drm(
                     keys_string = " ".join([f"--key {key}" for key in keys])
 
                 elif "classplusapp.com/drm/" in url:
-                    url = f"https://cpapi-rjbs-1l0p.onrender.com/extract_keys?url={url}@bots_updatee&user_id=5830856952"
+                    url = f"https://cpapi-ytas.onrender.com/extract_keys?url={url}@bots_updatee&user_id=5830856952"
                     #url = f"https://drmapijion-botupdatevip.vercel.app/api?url={url}&token={raw_text4}"
                     #url = 'https://dragoapi.vercel.app/classplus?link=' + url
                     mpd, keys = helper.get_mps_and_keys(url)
@@ -225,19 +225,19 @@ async def process_drm(
                     keys_string = " ".join([f"--key {key}" for key in keys]) 
 
                 elif "classplusapp" in url:
-                    response = requests.get(f"https://cpapi-rjbs-1l0p.onrender.com/extract_keys?url={url}@bots_updatee&user_id=5830856952")
+                    response = requests.get(f"https://cpapi-ytas.onrender.com/extract_keys?url={url}@bots_updatee&user_id=5830856952")
                     url = response.json()['url']
                 
                 elif "tencdn.classplusapp" in url:
-                    response = requests.get(f"https://cpapi-rjbs-1l0p.onrender.com/extract_keys?url={url}@bots_updatee&user_id=5830856952")
+                    response = requests.get(f"https://cpapi-ytas.onrender.com/extract_keys?url={url}@bots_updatee&user_id=5830856952")
                     url = response.json()['url']
            
                 elif 'videos.classplusapp' in url:
-                    response = requests.get(f"https://cpapi-rjbs-1l0p.onrender.com/extract_keys?url={url}@bots_updatee&user_id=5830856952")
+                    response = requests.get(f"https://cpapi-ytas.onrender.com/extract_keys?url={url}@bots_updatee&user_id=5830856952")
                     url = response.json()['url']
             
                 elif 'media-cdn.classplusapp.com' in url or 'media-cdn-alisg.classplusapp.com' in url or 'media-cdn-a.classplusapp.com' in url: 
-                    response = requests.get(f"https://cpapi-rjbs-1l0p.onrender.com/extract_keys?url={url}@bots_updatee&user_id=5830856952")
+                    response = requests.get(f"https://cpapi-ytas.onrender.com/extract_keys?url={url}@bots_updatee&user_id=5830856952")
                     url = response.json()['url']
 
                 
