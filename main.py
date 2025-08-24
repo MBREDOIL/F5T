@@ -42,10 +42,7 @@ bot = Client(
     "bot",
     api_id=API_ID,
     api_hash=API_HASH,
-    bot_token=BOT_TOKEN,
-    sleep_threshold=30,
-    max_concurrent_transmissions=5,
-    workers=8
+    bot_token=BOT_TOKEN
 )
 
 cookies_file_path = os.getenv("cookies_file_path", "youtube_cookies.txt")
