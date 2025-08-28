@@ -307,7 +307,7 @@ async def send_vvid(bot: Client, m: Message, cc, filename, thumb, name, prog, ch
         os.remove(thumb_path)
 
 
-async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
+async def send_vird(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
     try:
         # Generate thumbnail if needed
         if not thumb:
@@ -409,6 +409,109 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
                 os.remove(filename)
             if os.path.exists(thumbnail):
                 os.remove(thumbnail)
+    except Exception as e:
+        logger.error(f"send_vid failed: {str(e)}")
+
+async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
+    try:
+        # Generate frame thumb if no custom thumb is provided
+        if not thumb:
+            frame_thumb = f"{filename}.jpg"
+            subprocess.run(
+                f'ffmpeg -i "{filename}" -ss 00:00:10 -vframes 1 "{frame_thumb}" -y',
+                shell=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+            thumbnail = frame_thumb if os.path.exists(frame_thumb) else None
+        else:
+            thumbnail = thumb
+
+        # File size check
+        file_size = os.path.getsize(filename)
+        max_size = 1.8 * 1024 * 1024 * 1024  # 1.8 GB
+
+        async def _try_send_video(video_path, thumb_path):
+            dur = int(duration(video_path))
+            start_time = time.time()
+            reply = await bot.send_message(channel_id, f"**Uploading Video:**\n{name}")
+            try:
+                await bot.send_video(
+                    channel_id,
+                    video_path,
+                    caption=cc,
+                    supports_streaming=True,
+                    thumb=thumb_path if thumb_path and os.path.exists(thumb_path) else None,
+                    duration=dur,
+                    progress=progress_bar,
+                    progress_args=(reply, start_time)
+                )
+                return True
+            except Exception as e:
+                logger.warning(f"send_video failed: {e}")
+                # Retry without thumbnail
+                try:
+                    await bot.send_video(
+                        channel_id,
+                        video_path,
+                        caption=cc,
+                        supports_streaming=True,
+                        duration=dur,
+                        progress=progress_bar,
+                        progress_args=(reply, start_time)
+                    )
+                    return True
+                except Exception as e2:
+                    logger.error(f"send_video retry (no thumb) failed: {e2}")
+                    return False
+            finally:
+                try:
+                    await reply.delete()
+                except Exception:
+                    pass
+
+        if file_size <= max_size:
+            ok = await _try_send_video(filename, thumbnail)
+            if not ok:
+                await bot.send_message(channel_id, f"⚠️ Video upload failed: {name}")
+        else:
+            # Split into 1.8GB parts
+            notify = await bot.send_message(channel_id, "Video is too large. Splitting into 1.8GB parts...")
+            total_dur = duration(filename)
+            avg_bitrate = file_size / total_dur
+            target_duration = int(max_size / avg_bitrate)
+
+            part_number = 1
+            start = 0
+            while start < total_dur:
+                part_file = f"{filename}_part{part_number}.mp4"
+                cmd = f'ffmpeg -y -i "{filename}" -ss {start} -t {target_duration} -c copy "{part_file}"'
+                subprocess.run(cmd, shell=True)
+                part_thumb = thumbnail if part_number == 1 else None
+                ok = await _try_send_video(part_file, part_thumb)
+                if not ok:
+                    await bot.send_message(channel_id, f"⚠️ Part {part_number} upload failed: {name}")
+                os.remove(part_file)
+                part_number += 1
+                start += target_duration
+            try:
+                await notify.delete()
+            except Exception:
+                pass
+
+        # Cleanup main file
+        try:
+            if os.path.exists(filename):
+                os.remove(filename)
+        except Exception:
+            pass
+
+        # 🔹 Cleanup thumb
+        if thumbnail and os.path.exists(thumbnail):
+            # agar user-provided hai to mat delete karo
+            if not (thumb and thumbnail == thumb):
+                os.remove(thumbnail)
+
     except Exception as e:
         logger.error(f"send_vid failed: {str(e)}")
 
