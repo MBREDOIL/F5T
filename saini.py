@@ -155,15 +155,18 @@ async def decrypt_and_merge_video_simple_key(mpd_url, key, output_path, output_n
         print("▶ Fetching MPD ...")
         resp = requests.get(mpd_url)
         resp.raise_for_status()
-        mpd = resp.text
+        mpd_content = resp.text
 
         # XML parse
-        root = ET.fromstring(mpd)
+        root = ET.fromstring(mpd_content)
         ns = {"mpd": "urn:mpeg:dash:schema:mpd:2011"}
 
-        # Get audio and video representations
+        # Find audio and video representations
         audio_repr = root.find(".//mpd:AdaptationSet[@contentType='audio']/mpd:Representation", ns)
         video_repr = root.find(".//mpd:AdaptationSet[@contentType='video']/mpd:Representation", ns)
+
+        if audio_repr is None or video_repr is None:
+            raise Exception("Could not find audio or video representations in MPD")
 
         audio_base = audio_repr.find("mpd:BaseURL", ns).text
         video_base = video_repr.find("mpd:BaseURL", ns).text
@@ -172,12 +175,14 @@ async def decrypt_and_merge_video_simple_key(mpd_url, key, output_path, output_n
         audio_url = base_path + audio_base
         video_url = base_path + video_base
 
+        print("🎵 Audio URL:", audio_url)
+        print("🎥 Video URL:", video_url)
+
         # Download files
         print("▶ Downloading files...")
-        audio_enc = output_path / "audio_enc.mp4"
-        video_enc = output_path / "video_enc.mp4"
         
         # Download audio
+        audio_enc = output_path / "audio_enc.mp4"
         async with aiohttp.ClientSession() as session:
             async with session.get(audio_url) as response:
                 if response.status == 200:
@@ -187,6 +192,7 @@ async def decrypt_and_merge_video_simple_key(mpd_url, key, output_path, output_n
                     raise Exception(f"Audio download failed: {response.status}")
         
         # Download video
+        video_enc = output_path / "video_enc.mp4"
         async with aiohttp.ClientSession() as session:
             async with session.get(video_url) as response:
                 if response.status == 200:
@@ -195,33 +201,44 @@ async def decrypt_and_merge_video_simple_key(mpd_url, key, output_path, output_n
                 else:
                     raise Exception(f"Video download failed: {response.status}")
 
-        # Decrypt files
+        print("✅ Download completed")
         print("▶ Decrypting with mp4decrypt ...")
+
+        # Decrypt files
         audio_dec = output_path / "audio_dec.mp4"
         video_dec = output_path / "video_dec.mp4"
         
-        subprocess.run([
+        # Decrypt audio
+        audio_decrypt_cmd = [
             "mp4decrypt", "--key", key,
             str(audio_enc), str(audio_dec)
-        ], check=True)
+        ]
+        subprocess.run(audio_decrypt_cmd, check=True)
         
-        subprocess.run([
+        # Decrypt video
+        video_decrypt_cmd = [
             "mp4decrypt", "--key", key,
             str(video_enc), str(video_dec)
-        ], check=True)
+        ]
+        subprocess.run(video_decrypt_cmd, check=True)
+
+        print("✅ Decryption completed")
+        print("▶ Merging with ffmpeg ...")
 
         # Merge files
-        print("▶ Merging with ffmpeg ...")
         output_file = output_path / f"{output_name}.mp4"
-        subprocess.run([
+        merge_cmd = [
             "ffmpeg", "-y",
             "-i", str(video_dec),
             "-i", str(audio_dec),
             "-c", "copy",
             str(output_file)
-        ], check=True)
+        ]
+        subprocess.run(merge_cmd, check=True)
 
-        # Cleanup
+        print("✅ Merge completed!")
+
+        # Cleanup intermediate files
         for file in [audio_enc, video_enc, audio_dec, video_dec]:
             if file.exists():
                 file.unlink()
@@ -230,15 +247,21 @@ async def decrypt_and_merge_video_simple_key(mpd_url, key, output_path, output_n
 
     except Exception as e:
         logger.error(f"Error during simple key decryption and merging: {str(e)}")
+        # Cleanup on error
+        for file in ["audio_enc.mp4", "video_enc.mp4", "audio_dec.mp4", "video_dec.mp4"]:
+            file_path = output_path / file
+            if file_path.exists():
+                file_path.unlink()
         raise
 
 async def decrypt_and_merge_video(mpd_url, keys_string, output_path, output_name, quality="720"):
     try:
-        # Check if we have a simple key (2 parts) or complex key (6 parts)
-        if keys_string.count(":") == 1:  # Simple key (2 parts)
-            return await decrypt_and_merge_video_simple_key(mpd_url, keys_string, output_path, output_name)
+        # Check if we have a simple key (1 key with 2 parts) or complex key (multiple keys)
+        keys = keys_string.split()
+        if len(keys) == 1 and keys[0].count(":") == 1:  # Simple key (2 parts)
+            return await decrypt_and_merge_video_simple_key(mpd_url, keys[0], output_path, output_name)
         
-        # Original implementation for complex keys (6 parts)
+        # Original implementation for complex keys (multiple keys)
         output_path = Path(output_path)
         output_path.mkdir(parents=True, exist_ok=True)
         temp_files = []
@@ -340,7 +363,6 @@ async def send_doc(bot: Client, m: Message, cc, ka, cc1, prog, count, name, chan
     count += 1
     await reply.delete()
     os.remove(ka)
-
 
 async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
     try:
