@@ -796,7 +796,7 @@ async def process_drn(
                             failed_count += 1
                             await bot.send_message(channel_id, f'⚠️**Audio Download Failed**⚠️\n**Name** =>> `{str(count).zfill(3)} {name1}`\n**Url** =>> {link0}')
                     elif 'encrypted.m' in url:    
-                        Show = f"__**Video Downloading__**\n<pre><code>{str(count).zfill(3)}) {name1}</code></pre>"
+                        Show = f"__**En Video Downloading__**\n<pre><code>{str(count).zfill(3)}) {name1}</code></pre>"
                         prog = await bot.send_message(channel_id, Show, disable_web_page_preview=True)
                         res_file = await helper.download_and_decrypt_video(url, cmd, name, appxkey)  
                         if res_file:
@@ -810,8 +810,8 @@ async def process_drn(
                         await asyncio.sleep(1)
                         continue  
 
-                    elif 'drmcdni' in url or 'drm/wv' in url:
-                        Show = f"__**Video Downloading__**\n<pre><code>{str(count).zfill(3)}) {name1}</code></pre>"
+                    elif 'drmcdni' in url or 'drm/wv' in url or (isinstance(keys_string, str) and keys_string):
+                        Show = f"__**Drm Video Downloading__**\n<pre><code>{str(count).zfill(3)}) {name1}</code></pre>"
                         prog = await bot.send_message(channel_id, Show, disable_web_page_preview=True)
                         
                         # Check if we have a simple key (2 parts) or complex keys
