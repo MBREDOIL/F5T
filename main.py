@@ -204,22 +204,39 @@ async def process_drm(
                 if "acecwply" in url:
                     cmd = f'yt-dlp -o "{name}.%(ext)s" -f "bestvideo[height<={raw_text2}]+bestaudio" --hls-prefer-ffmpeg --no-keep-video --remux-video mkv --no-warning "{url}"'
 
+
                 elif "https://cpvod.testbook.com/" in url:
-                    url = url.replace("https://cpvod.testbook.com/","https://media-cdn.classplusapp.com/drm/")
-                    url = f"https://covercel.vercel.app/extract_keys?url={url}@bots_updatee&user_id=5830856952"
-                    #url = f"https://drmapijion-botupdatevip.vercel.app/api?url={url}&token={raw_text4}"
-                    #url = 'https://dragoapi.vercel.app/classplus?link=' + url
-                    mpd, keys = helper.get_mps_and_keys(url)
-                    url = mpd
-                    keys_string = " ".join([f"--key {key}" for key in keys])
+                    url = url.replace("https://cpvod.testbook.com/", "https://media-cdn.classplusapp.com/drm/")
+                    api_response = requests.get(f"https://covercel.vercel.app/extract_keys?url={url}@bots_updatee&user_id=5830856952")
+                    response_data = api_response.json()
+                    mpd = response_data.get('MPD')
+                    keys = response_data.get('KEYS', [])
+
+                    # Check if we have a simple 2-part key
+                    if keys and len(keys) == 1 and keys[0].count(":") == 1:
+                        # Single key with 2 parts - use simple key method
+                        url = mpd
+                        keys_string = keys[0]  # Just the key, no --key prefix
+                    else:
+                        # Multiple keys - use complex method
+                        url = mpd
+                        keys_string = " ".join([f"--key {key}" for key in keys])
 
                 elif "classplusapp.com/drm/" in url:
-                    url = f"https://covercel.vercel.app/extract_keys?url={url}@bots_updatee&user_id=5830856952"
-                    #url = f"https://drmapijion-botupdatevip.vercel.app/api?url={url}&token={raw_text4}"
-                    #url = 'https://dragoapi.vercel.app/classplus?link=' + url
-                    mpd, keys = helper.get_mps_and_keys(url)
-                    url = mpd
-                    keys_string = " ".join([f"--key {key}" for key in keys]) 
+                    api_response = requests.get(f"https://covercel.vercel.app/extract_keys?url={url}@bots_updatee&user_id=5830856952")
+                    response_data = api_response.json()
+                    mpd = response_data.get('MPD')
+                    keys = response_data.get('KEYS', [])
+
+                    # Check if we have a simple 2-part key
+                    if keys and len(keys) == 1 and keys[0].count(":") == 1:
+                        # Single key with 2 parts - use simple key method
+                        url = mpd
+                        keys_string = keys[0]  # Just the key, no --key prefix
+                    else:
+                        # Multiple keys - use complex method
+                        url = mpd
+                        keys_string = " ".join([f"--key {key}" for key in keys])
 
                 elif "classplusapp" in url:
                     response = requests.get(f"https://covercel.vercel.app/extract_keys?url={url}@bots_updatee&user_id=5830856952")
@@ -391,12 +408,20 @@ async def process_drm(
                             count += 1
                         await prog.delete()
                         await asyncio.sleep(1)
-                        continue  
+                        continue
 
                     elif 'drmcdni' in url or 'drm/wv' in url:
                         Show = f"__**Video Downloading__**\n<pre><code>{str(count).zfill(3)}) {name1}</code></pre>"
                         prog = await bot.send_message(channel_id, Show, disable_web_page_preview=True)
-                        res_file = await helper.decrypt_and_merge_video(mpd, keys_string, path, name, raw_text2)
+
+                        # Check if we have a simple key (2 parts) or complex keys
+                        if isinstance(keys_string, str) and keys_string.count(":") == 1 and not keys_string.startswith("--key"):
+                            # Simple 2-part key
+                            res_file = await helper.decrypt_and_merge_video_simple_key(mpd, keys_string, path, name)
+                        else:
+                            # Complex keys (multiple keys with --key prefix)
+                            res_file = await helper.decrypt_and_merge_video(mpd, keys_string, path, name, raw_text2)
+    
                         if res_file:
                             await helper.send_vid(bot, m, cc, res_file, thumb, name, prog, channel_id)
                             count += 1
@@ -582,22 +607,39 @@ async def process_drn(
                     cmd = f'yt-dlp -o "{name}.%(ext)s" -f "bestvideo[height<={raw_text2}]+bestaudio" --hls-prefer-ffmpeg --no-keep-video --remux-video mkv --no-warning "{url}"'
 
                 elif "https://cpvod.testbook.com/" in url:
-                    url = url.replace("https://cpvod.testbook.com/","https://media-cdn.classplusapp.com/drm/")
-                    url = f"https://scammer-keys.vercel.app/api?url={url}&token={raw_text4}&auth=@scammer_botxz1"
-                    #url = f"https://drmapijion-botupdatevip.vercel.app/api?url={url}&token={raw_text4}"
-                    #url = 'https://dragoapi.vercel.app/classplus?link=' + url
-                    mpd, keys = helper.get_mps_and_keys(url)
-                    url = mpd
-                    keys_string = " ".join([f"--key {key}" for key in keys])
+                    url = url.replace("https://cpvod.testbook.com/", "https://media-cdn.classplusapp.com/drm/")
+                    api_response = requests.get(f"https://covercel.vercel.app/extract_keys?url={url}@bots_updatee&user_id=5830856952")
+                    response_data = api_response.json()
+                    mpd = response_data.get('MPD')
+                    keys = response_data.get('KEYS', [])
+
+                    # Check if we have a simple 2-part key
+                    if keys and len(keys) == 1 and keys[0].count(":") == 1:
+                        # Single key with 2 parts - use simple key method
+                        url = mpd
+                        keys_string = keys[0]  # Just the key, no --key prefix
+                    else:
+                        # Multiple keys - use complex method
+                        url = mpd
+                        keys_string = " ".join([f"--key {key}" for key in keys])
 
                 elif "classplusapp.com/drm/" in url:
-                    url = f"https://scammer-keys.vercel.app/api?url={url}&token={raw_text4}&auth=@scammer_botxz1"
-                    #url = f"https://drmapijion-botupdatevip.vercel.app/api?url={url}&token={raw_text4}"
-                    #url = 'https://dragoapi.vercel.app/classplus?link=' + url
-                    mpd, keys = helper.get_mps_and_keys(url)
-                    url = mpd
-                    keys_string = " ".join([f"--key {key}" for key in keys]) 
+                    api_response = requests.get(f"https://covercel.vercel.app/extract_keys?url={url}@bots_updatee&user_id=5830856952")
+                    response_data = api_response.json()
+                    mpd = response_data.get('MPD')
+                    keys = response_data.get('KEYS', [])
 
+                    # Check if we have a simple 2-part key
+                    if keys and len(keys) == 1 and keys[0].count(":") == 1:
+                        # Single key with 2 parts - use simple key method
+                        url = mpd
+                        keys_string = keys[0]  # Just the key, no --key prefix
+                    else:
+                        # Multiple keys - use complex method
+                        url = mpd
+                        keys_string = " ".join([f"--key {key}" for key in keys])
+
+                
                 elif "tencdn.classplusapp" in url:
                     headers = {'host': 'api.classplusapp.com', 'x-access-token': f'{raw_text4}', 'accept-language': 'EN', 'api-version': '18', 'app-version': '1.4.73.2', 'build-number': '35', 'connection': 'Keep-Alive', 'content-type': 'application/json', 'device-details': 'Xiaomi_Redmi 7_SDK-32', 'device-id': 'c28d3cb16bbdac01', 'region': 'IN', 'user-agent': 'Mobile-Android', 'webengage-luid': '00000187-6fe4-5d41-a530-26186858be4c', 'accept-encoding': 'gzip'}
                     #headers = {'Host': 'api.classplusapp.com', 'x-access-token': f'{token_cp}', 'user-agent': 'Mobile-Android', 'app-version': '1.4.37.1', 'api-version': '18', 'device-id': '5d0d17ac8b3c9f51', 'device-details': '2848b866799971ca_2848b8667a33216c_SDK-30', 'accept-encoding': 'gzip'}
@@ -770,7 +812,15 @@ async def process_drn(
                     elif 'drmcdni' in url or 'drm/wv' in url:
                         Show = f"__**Video Downloading__**\n<pre><code>{str(count).zfill(3)}) {name1}</code></pre>"
                         prog = await bot.send_message(channel_id, Show, disable_web_page_preview=True)
-                        res_file = await helper.decrypt_and_merge_video(mpd, keys_string, path, name, raw_text2)
+                        
+                        # Check if we have a simple key (2 parts) or complex keys
+                        if isinstance(keys_string, str) and keys_string.count(":") == 1 and not keys_string.startswith("--key"):
+                            # Simple 2-part key
+                            res_file = await helper.decrypt_and_merge_video_simple_key(mpd, keys_string, path, name)
+                        else:
+                            # Complex keys (multiple keys with --key prefix)
+                            res_file = await helper.decrypt_and_merge_video(mpd, keys_string, path, name, raw_text2)
+    
                         if res_file:
                             await helper.send_vid(bot, m, cc, res_file, thumb, name, prog, channel_id)
                             count += 1
