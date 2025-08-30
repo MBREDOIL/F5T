@@ -146,7 +146,7 @@ async def download_and_decrypt_video(url, cmd, name, key):
         logger.error(f"Decryption failed: {video_path}")
         return None
 
-async def decrypt_and_merge_video_simple_key(mpd_url, key, output_path, output_name):
+async def decrypt_and_merge_video_simple_key(mpd_url, key_string, output_path, output_name):
     """Handle DRM videos with simple 2-part keys"""
     try:
         output_path = Path(output_path)
@@ -210,14 +210,14 @@ async def decrypt_and_merge_video_simple_key(mpd_url, key, output_path, output_n
         
         # Decrypt audio
         audio_decrypt_cmd = [
-            "mp4decrypt", "--key", key,
+            "mp4decrypt", "--key", key_string,
             str(audio_enc), str(audio_dec)
         ]
         subprocess.run(audio_decrypt_cmd, check=True)
         
         # Decrypt video
         video_decrypt_cmd = [
-            "mp4decrypt", "--key", key,
+            "mp4decrypt", "--key", key_string,
             str(video_enc), str(video_dec)
         ]
         subprocess.run(video_decrypt_cmd, check=True)
@@ -254,13 +254,14 @@ async def decrypt_and_merge_video_simple_key(mpd_url, key, output_path, output_n
                 file_path.unlink()
         raise
 
+
 async def decrypt_and_merge_video(mpd_url, keys_string, output_path, output_name, quality="720"):
     try:
         # Check if we have a simple key (1 key with 2 parts) or complex key (multiple keys)
-        keys = keys_string.split()
-        if len(keys) == 1 and keys[0].count(":") == 1:  # Simple key (2 parts)
-            return await decrypt_and_merge_video_simple_key(mpd_url, keys[0], output_path, output_name)
-        
+        if isinstance(keys_string, str) and keys_string.count(":") == 1 and not keys_string.startswith("--key"):
+            # Simple 2-part key
+            return await decrypt_and_merge_video_simple_key(mpd_url, keys_string, output_path, output_name)
+            
         # Original implementation for complex keys (multiple keys)
         output_path = Path(output_path)
         output_path.mkdir(parents=True, exist_ok=True)
