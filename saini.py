@@ -11,9 +11,6 @@ import requests
 import tgcrypto
 import subprocess
 import concurrent.futures
-import tempfile
-import shutil
-import xml.etree.ElementTree as ET
 from math import ceil
 from utils import progress_bar
 from pyrogram import Client, filters
@@ -148,131 +145,72 @@ async def download_and_decrypt_video(url, cmd, name, key):
         logger.error(f"Decryption failed: {video_path}")
         return None
 
-def download_file_sync(url, out_path, headers):
-    """Synchronous file download"""
-    r = requests.get(url, headers=headers, stream=True)
-    r.raise_for_status()
-    with open(out_path, "wb") as f:
-        for chunk in r.iter_content(chunk_size=1024 * 512):
-            f.write(chunk)
-
-def run_cmd_sync(cmd):
-    """Run shell command synchronously"""
-    subprocess.check_call(cmd)
-
-def decrypt_and_merge_sync(mpd_url, key, out_path, resolution=None):
-    """Synchronous version of the decryption function"""
-    workdir = tempfile.mkdtemp(prefix="saini_")
-    try:
-        audio_enc = os.path.join(workdir, "audio.mp4")
-        video_enc = os.path.join(workdir, "video.mp4")
-        audio_dec = os.path.join(workdir, "audio_dec.mp4")
-        video_dec = os.path.join(workdir, "video_dec.mp4")
-
-        # fetch MPD
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Linux; Android 12; Mobile; rv:109.0) Gecko/117.0 Firefox/117.0"
-        }
-        
-        mpd_content = requests.get(mpd_url, headers=headers).text
-
-        # detect type
-        if "<SegmentTemplate" in mpd_content:
-            # OLD STYLE (SegmentTemplate)
-            audio_init = re.search(r'initialization="([^"]+audio[^"]+)"', mpd_content).group(1)
-            audio_media = re.search(r'media="([^"]+audio[^"]+)"', mpd_content).group(1).replace("$Number$", "1")
-            audio_url = mpd_url.rsplit("/", 1)[0] + "/" + audio_init.split("/")[0] + "/"
-            
-            # Download audio
-            download_file_sync(audio_url + audio_init, audio_enc, headers)
-            download_file_sync(audio_url + audio_media, audio_enc, headers)
-
-            # Video
-            video_init = re.search(r'initialization="([^"]+video[^"]+)"', mpd_content).group(1)
-            video_media = re.search(r'media="([^"]+video[^"]+)"', mpd_content).group(1).replace("$Number$", "1")
-            video_url = mpd_url.rsplit("/", 1)[0] + "/" + video_init.split("/")[0] + "/"
-            
-            # Download video
-            download_file_sync(video_url + video_init, video_enc, headers)
-            download_file_sync(video_url + video_media, video_enc, headers)
-
-        else:
-            # NEW STYLE (BaseURL + SegmentBase)
-            root = ET.fromstring(mpd_content)
-            ns = {"mpd": "urn:mpeg:dash:schema:mpd:2011"}
-            period = root.find("mpd:Period", ns)
-
-            # audio
-            audio_repr = period.find(".//mpd:AdaptationSet[@contentType='audio']/mpd:Representation", ns)
-            audio_url = mpd_url.rsplit("/", 1)[0] + "/" + audio_repr.find("mpd:BaseURL", ns).text
-            download_file_sync(audio_url, audio_enc, headers)
-
-            # video (choose resolution if given)
-            video_reprs = period.findall(".//mpd:AdaptationSet[@contentType='video']/mpd:Representation", ns)
-            if resolution:
-                chosen = None
-                for v in video_reprs:
-                    if v.attrib.get("height") == str(resolution):
-                        chosen = v
-                        break
-                video_repr = chosen or video_reprs[-1]
-            else:
-                video_repr = video_reprs[-1]
-
-            video_url = mpd_url.rsplit("/", 1)[0] + "/" + video_repr.find("mpd:BaseURL", ns).text
-            download_file_sync(video_url, video_enc, headers)
-
-        # Decrypt
-        run_cmd_sync(["mp4decrypt", "--key", key, video_enc, video_dec])
-        run_cmd_sync(["mp4decrypt", "--key", key, audio_enc, audio_dec])
-
-        # Merge
-        run_cmd_sync([
-            "ffmpeg", "-y", "-i", video_dec, "-i", audio_dec,
-            "-c", "copy", out_path
-        ])
-
-    finally:
-        # Cleanup
-        shutil.rmtree(workdir, ignore_errors=True)
-
 async def decrypt_and_merge_video(mpd_url, keys_string, output_path, output_name, quality="720"):
     try:
         output_path = Path(output_path)
         output_path.mkdir(parents=True, exist_ok=True)
+        temp_files = []
 
-        # Parse keys from keys_string
-        keys = []
-        key_parts = keys_string.split()
-        for i in range(0, len(key_parts)):
-            if key_parts[i] == "--key" and i+1 < len(key_parts):
-                keys.append(key_parts[i+1])
-
-        if not keys:
-            raise ValueError("No decryption keys provided")
-
-        # Use the first key for both audio and video
-        key = keys[0]
-
-        # Download and process using the new method
-        final_output = output_path / f"{output_name}.mp4"
+        # Download video
+        cmd1 = f'yt-dlp -f "bv[height<={quality}]+ba/b" -o "{output_path}/file.%(ext)s" --allow-unplayable-formats --no-check-certificate --external-downloader aria2c "{mpd_url}"'
+        logger.info(f"Running command: {cmd1}")
+        os.system(cmd1)
         
-        # Run the synchronous decryption in a thread pool
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(
-            None, 
-            decrypt_and_merge_sync,
-            mpd_url,
-            key,
-            str(final_output),
-            int(quality) if quality.isdigit() else 720
-        )
+        # Find downloaded files
+        avDir = list(output_path.iterdir())
+        logger.info(f"Downloaded files: {avDir}")
+        
+        video_decrypted = False
+        audio_decrypted = False
 
-        return str(final_output)
+        for data in avDir:
+            if data.suffix == ".mp4" and not video_decrypted:
+                decrypted_video = output_path / "video.mp4"
+                cmd2 = f'mp4decrypt {keys_string} --show-progress "{data}" "{decrypted_video}"'
+                logger.info(f"Running command: {cmd2}")
+                os.system(cmd2)
+                if decrypted_video.exists():
+                    video_decrypted = True
+                    temp_files.append(data)
+                data.unlink()
+            elif data.suffix == ".m4a" and not audio_decrypted:
+                decrypted_audio = output_path / "audio.m4a"
+                cmd3 = f'mp4decrypt {keys_string} --show-progress "{data}" "{decrypted_audio}"'
+                logger.info(f"Running command: {cmd3}")
+                os.system(cmd3)
+                if decrypted_audio.exists():
+                    audio_decrypted = True
+                    temp_files.append(data)
+                data.unlink()
+
+        if not video_decrypted or not audio_decrypted:
+            raise FileNotFoundError("Decryption failed: video or audio file not found.")
+
+        # Merge files
+        output_file = output_path / f"{output_name}.mp4"
+        cmd4 = f'ffmpeg -i "{output_path}/video.mp4" -i "{output_path}/audio.m4a" -c copy "{output_file}"'
+        logger.info(f"Running command: {cmd4}")
+        os.system(cmd4)
+        
+        # Get duration
+        cmd5 = f'ffmpeg -i "{output_file}" 2>&1 | grep "Duration"'
+        duration_info = os.popen(cmd5).read()
+        logger.info(f"Duration info: {duration_info}")
+
+        return str(output_file)
 
     except Exception as e:
         logger.error(f"Error during decryption and merging: {str(e)}")
         raise
+    finally:
+        # Clean up temporary files
+        for file in temp_files:
+            if file.exists():
+                file.unlink()
+        for temp in ["video.mp4", "audio.m4a"]:
+            temp_path = output_path / temp
+            if temp_path.exists():
+                temp_path.unlink()
 
 async def run(cmd):
     proc = await asyncio.create_subprocess_shell(
@@ -405,9 +343,8 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
         except Exception:
             pass
 
-        # 🔹 Cleanup thumb
+        # Cleanup thumb
         if thumbnail and os.path.exists(thumbnail):
-            # agar user-provided hai to mat delete karo
             if not (thumb and thumbnail == thumb):
                 os.remove(thumbnail)
 
