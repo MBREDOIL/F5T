@@ -64,85 +64,6 @@ def get_mps_and_keys(api_url):
     mpd = response_json.get('MPD')
     keys = response_json.get('KEYS')
     return mpd, keys
-
-def download_file_sync(url, out_path, headers=None):
-    """Synchronous file download"""
-    if headers is None:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Linux; Android 12; Mobile; rv:109.0) Gecko/117.0 Firefox/117.0"
-        }
-    
-    r = requests.get(url, headers=headers, stream=True)
-    r.raise_for_status()
-    with open(out_path, "wb") as f:
-        for chunk in r.iter_content(chunk_size=1024 * 512):
-            f.write(chunk)
-
-def run_cmd_sync(cmd):
-    """Run shell command synchronously"""
-    subprocess.run(cmd, check=True)
-
-def process_new_mpd_type(mpd_url, key, output_path, output_name, quality=None):
-    """Process new type MPD (with BaseURL)"""
-    workdir = output_path
-    try:
-        audio_enc = os.path.join(workdir, "audio_enc.mp4")
-        video_enc = os.path.join(workdir, "video_enc.mp4")
-        audio_dec = os.path.join(workdir, "audio_dec.mp4")
-        video_dec = os.path.join(workdir, "video_dec.mp4")
-        final_output = os.path.join(workdir, f"{output_name}.mp4")
-
-        # Fetch MPD
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Linux; Android 12; Mobile; rv:109.0) Gecko/117.0 Firefox/117.0"
-        }
-        
-        mpd_content = requests.get(mpd_url, headers=headers).text
-
-        # Parse MPD XML
-        root = ET.fromstring(mpd_content)
-        ns = {"mpd": "urn:mpeg:dash:schema:mpd:2011"}
-        period = root.find("mpd:Period", ns)
-
-        # Audio
-        audio_repr = period.find(".//mpd:AdaptationSet[@contentType='audio']/mpd:Representation", ns)
-        audio_base = audio_repr.find("mpd:BaseURL", ns).text
-        audio_url = mpd_url.rsplit("/", 1)[0] + "/" + audio_base
-
-        # Video (choose resolution if given)
-        video_reprs = period.findall(".//mpd:AdaptationSet[@contentType='video']/mpd:Representation", ns)
-        if quality:
-            chosen = None
-            for v in video_reprs:
-                if v.attrib.get("height") == str(quality):
-                    chosen = v
-                    break
-            video_repr = chosen or video_reprs[-1]
-        else:
-            video_repr = video_reprs[-1]
-
-        video_base = video_repr.find("mpd:BaseURL", ns).text
-        video_url = mpd_url.rsplit("/", 1)[0] + "/" + video_base
-
-        # Download files
-        download_file_sync(audio_url, audio_enc, headers)
-        download_file_sync(video_url, video_enc, headers)
-
-        # Decrypt
-        run_cmd_sync(["mp4decrypt", "--key", key, audio_enc, audio_dec])
-        run_cmd_sync(["mp4decrypt", "--key", key, video_enc, video_dec])
-
-        # Merge
-        run_cmd_sync([
-            "ffmpeg", "-y", "-i", video_dec, "-i", audio_dec,
-            "-c", "copy", final_output
-        ])
-
-        return final_output
-
-    except Exception as e:
-        logger.error(f"Error processing new MPD type: {str(e)}")
-        raise
    
 def exec(cmd):
     process = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -225,95 +146,163 @@ async def download_and_decrypt_video(url, cmd, name, key):
         logger.error(f"Decryption failed: {video_path}")
         return None
 
-async def decrypt_and_merge_video(mpd_url, keys_string, output_path, output_name, quality="720"):
+async def decrypt_and_merge_video_simple_key(mpd_url, key, output_path, output_name):
+    """Handle DRM videos with simple 2-part keys"""
     try:
         output_path = Path(output_path)
         output_path.mkdir(parents=True, exist_ok=True)
-
-        # Parse keys from keys_string
-        keys = []
-        key_parts = keys_string.split()
-        for i in range(0, len(key_parts)):
-            if key_parts[i] == "--key" and i+1 < len(key_parts):
-                keys.append(key_parts[i+1])
-
-        if not keys:
-            raise ValueError("No decryption keys provided")
-
-        # Use the first key
-        key = keys[0]
-
-        # Check MPD type by fetching and examining the content
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Linux; Android 12; Mobile; rv:109.0) Gecko/117.0 Firefox/117.0"
-        }
         
-        mpd_content = requests.get(mpd_url, headers=headers).text
+        print("▶ Fetching MPD ...")
+        resp = requests.get(mpd_url)
+        resp.raise_for_status()
+        mpd = resp.text
+
+        # XML parse
+        root = ET.fromstring(mpd)
+        ns = {"mpd": "urn:mpeg:dash:schema:mpd:2011"}
+
+        # Get audio and video representations
+        audio_repr = root.find(".//mpd:AdaptationSet[@contentType='audio']/mpd:Representation", ns)
+        video_repr = root.find(".//mpd:AdaptationSet[@contentType='video']/mpd:Representation", ns)
+
+        audio_base = audio_repr.find("mpd:BaseURL", ns).text
+        video_base = video_repr.find("mpd:BaseURL", ns).text
+
+        base_path = mpd_url.rsplit("/", 1)[0] + "/"
+        audio_url = base_path + audio_base
+        video_url = base_path + video_base
+
+        # Download files
+        print("▶ Downloading files...")
+        audio_enc = output_path / "audio_enc.mp4"
+        video_enc = output_path / "video_enc.mp4"
         
-        # Determine MPD type and process accordingly
-        if "<SegmentTemplate" in mpd_content:
-            # Old type MPD - use yt-dlp method
-            temp_files = []
+        # Download audio
+        async with aiohttp.ClientSession() as session:
+            async with session.get(audio_url) as response:
+                if response.status == 200:
+                    async with aiofiles.open(audio_enc, 'wb') as f:
+                        await f.write(await response.read())
+                else:
+                    raise Exception(f"Audio download failed: {response.status}")
+        
+        # Download video
+        async with aiohttp.ClientSession() as session:
+            async with session.get(video_url) as response:
+                if response.status == 200:
+                    async with aiofiles.open(video_enc, 'wb') as f:
+                        await f.write(await response.read())
+                else:
+                    raise Exception(f"Video download failed: {response.status}")
 
-            # Download video
-            cmd1 = f'yt-dlp -f "bv[height<={quality}]+ba/b" -o "{output_path}/file.%(ext)s" --allow-unplayable-formats --no-check-certificate --external-downloader aria2c "{mpd_url}"'
-            logger.info(f"Running command: {cmd1}")
-            os.system(cmd1)
-            
-            # Find downloaded files
-            avDir = list(output_path.iterdir())
-            logger.info(f"Downloaded files: {avDir}")
-            
-            video_decrypted = False
-            audio_decrypted = False
+        # Decrypt files
+        print("▶ Decrypting with mp4decrypt ...")
+        audio_dec = output_path / "audio_dec.mp4"
+        video_dec = output_path / "video_dec.mp4"
+        
+        subprocess.run([
+            "mp4decrypt", "--key", key,
+            str(audio_enc), str(audio_dec)
+        ], check=True)
+        
+        subprocess.run([
+            "mp4decrypt", "--key", key,
+            str(video_enc), str(video_dec)
+        ], check=True)
 
-            for data in avDir:
-                if data.suffix == ".mp4" and not video_decrypted:
-                    decrypted_video = output_path / "video.mp4"
-                    cmd2 = f'mp4decrypt {keys_string} --show-progress "{data}" "{decrypted_video}"'
-                    logger.info(f"Running command: {cmd2}")
-                    os.system(cmd2)
-                    if decrypted_video.exists():
-                        video_decrypted = True
-                        temp_files.append(data)
-                    data.unlink()
-                elif data.suffix == ".m4a" and not audio_decrypted:
-                    decrypted_audio = output_path / "audio.m4a"
-                    cmd3 = f'mp4decrypt {keys_string} --show-progress "{data}" "{decrypted_audio}"'
-                    logger.info(f"Running command: {cmd3}")
-                    os.system(cmd3)
-                    if decrypted_audio.exists():
-                        audio_decrypted = True
-                        temp_files.append(data)
-                    data.unlink()
+        # Merge files
+        print("▶ Merging with ffmpeg ...")
+        output_file = output_path / f"{output_name}.mp4"
+        subprocess.run([
+            "ffmpeg", "-y",
+            "-i", str(video_dec),
+            "-i", str(audio_dec),
+            "-c", "copy",
+            str(output_file)
+        ], check=True)
 
-            if not video_decrypted or not audio_decrypted:
-                raise FileNotFoundError("Decryption failed: video or audio file not found.")
+        # Cleanup
+        for file in [audio_enc, video_enc, audio_dec, video_dec]:
+            if file.exists():
+                file.unlink()
 
-            # Merge files
-            output_file = output_path / f"{output_name}.mp4"
-            cmd4 = f'ffmpeg -i "{output_path}/video.mp4" -i "{output_path}/audio.m4a" -c copy "{output_file}"'
-            logger.info(f"Running command: {cmd4}")
-            os.system(cmd4)
-            
-            return str(output_file)
-        else:
-            # New type MPD - use XML parsing method
-            loop = asyncio.get_event_loop()
-            final_output = await loop.run_in_executor(
-                None, 
-                process_new_mpd_type,
-                mpd_url,
-                key,
-                str(output_path),
-                output_name,
-                int(quality) if quality.isdigit() else None
-            )
-            return final_output
+        return str(output_file)
+
+    except Exception as e:
+        logger.error(f"Error during simple key decryption and merging: {str(e)}")
+        raise
+
+async def decrypt_and_merge_video(mpd_url, keys_string, output_path, output_name, quality="720"):
+    try:
+        # Check if we have a simple key (2 parts) or complex key (6 parts)
+        if keys_string.count(":") == 1:  # Simple key (2 parts)
+            return await decrypt_and_merge_video_simple_key(mpd_url, keys_string, output_path, output_name)
+        
+        # Original implementation for complex keys (6 parts)
+        output_path = Path(output_path)
+        output_path.mkdir(parents=True, exist_ok=True)
+        temp_files = []
+
+        # Download video
+        cmd1 = f'yt-dlp -f "bv[height<={quality}]+ba/b" -o "{output_path}/file.%(ext)s" --allow-unplayable-format --no-check-certificate --external-downloader aria2c "{mpd_url}"'
+        logger.info(f"Running command: {cmd1}")
+        os.system(cmd1)
+        
+        # Find downloaded files
+        avDir = list(output_path.iterdir())
+        logger.info(f"Downloaded files: {avDir}")
+        
+        video_decrypted = False
+        audio_decrypted = False
+
+        for data in avDir:
+            if data.suffix == ".mp4" and not video_decrypted:
+                decrypted_video = output_path / "video.mp4"
+                cmd2 = f'mp4decrypt {keys_string} --show-progress "{data}" "{decrypted_video}"'
+                logger.info(f"Running command: {cmd2}")
+                os.system(cmd2)
+                if decrypted_video.exists():
+                    video_decrypted = True
+                    temp_files.append(data)
+                data.unlink()
+            elif data.suffix == ".m4a" and not audio_decrypted:
+                decrypted_audio = output_path / "audio.m4a"
+                cmd3 = f'mp4decrypt {keys_string} --show-progress "{data}" "{decrypted_audio}"'
+                logger.info(f"Running command: {cmd3}")
+                os.system(cmd3)
+                if decrypted_audio.exists():
+                    audio_decrypted = True
+                    temp_files.append(data)
+                data.unlink()
+
+        if not video_decrypted or not audio_decrypted:
+            raise FileNotFoundError("Decryption failed: video or audio file not found.")
+
+        # Merge files
+        output_file = output_path / f"{output_name}.mp4"
+        cmd4 = f'ffmpeg -i "{output_path}/video.mp4" -i "{output_path}/audio.m4a" -c copy "{output_file}"'
+        logger.info(f"Running command: {cmd4}")
+        os.system(cmd4)
+        
+        # Get duration
+        cmd5 = f'ffmpeg -i "{output_file}" 2>&1 | grep "Duration"'
+        duration_info = os.popen(cmd5).read()
+        logger.info(f"Duration info: {duration_info}")
+
+        return str(output_file)
 
     except Exception as e:
         logger.error(f"Error during decryption and merging: {str(e)}")
         raise
+    finally:
+        # Clean up temporary files
+        for file in temp_files:
+            if file.exists():
+                file.unlink()
+        for temp in ["video.mp4", "audio.m4a"]:
+            temp_path = output_path / temp
+            if temp_path.exists():
+                temp_path.unlink()
 
 async def run(cmd):
     proc = await asyncio.create_subprocess_shell(
@@ -351,6 +340,7 @@ async def send_doc(bot: Client, m: Message, cc, ka, cc1, prog, count, name, chan
     count += 1
     await reply.delete()
     os.remove(ka)
+
 
 async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, channel_id):
     try:
@@ -446,8 +436,9 @@ async def send_vid(bot: Client, m: Message, cc, filename, thumb, name, prog, cha
         except Exception:
             pass
 
-        # Cleanup thumb
+        # 🔹 Cleanup thumb
         if thumbnail and os.path.exists(thumbnail):
+            # agar user-provided hai to mat delete karo
             if not (thumb and thumbnail == thumb):
                 os.remove(thumbnail)
 
